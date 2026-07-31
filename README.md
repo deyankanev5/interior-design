@@ -272,61 +272,21 @@ drag-drop, paste and direct image URLs all still work.
 
 ## Deploying to Azure
 
-Target is **Azure Static Web Apps**: the built SPA on the CDN, and the two API
-routes as managed Functions. The Free tier covers a studio-sized deployment.
+Static Web Apps on the **Free** tier: £0/month, and it stops serving past its
+quota rather than billing overage, so there is no path to a surprise invoice.
 
 ```bash
 az login
-./infra/deploy.sh palette-studio
-```
+./infra/deploy.sh palette-studio      # provisions, prints the deployment token
 
-That creates the resource group and the Static Web App from `infra/main.bicep`
-and prints a **deployment token**. Store it as the repository secret
-`AZURE_STATIC_WEB_APPS_API_TOKEN`:
-
-```bash
-gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN --body '<token>'
-```
-
-Every push to `main` then runs `.github/workflows/azure-static-web-apps.yml`,
-which typechecks, lints, builds, verifies the Functions bundles and deploys.
-Pull requests get their own preview URL, torn down when the PR closes.
-
-The token is scoped to that one Static Web App — it grants no other access to
-the subscription, which is why it is the credential to hand to CI rather than a
-service principal.
-
-### Deploying without GitHub Actions
-
-Actions is convenient, not required — a private repository with no Actions
-minutes left cannot run it at all. The same deployment works straight from a
-workstation with only the deployment token:
-
-```bash
 export SWA_CLI_DEPLOYMENT_TOKEN='<token>'
-npm run deploy            # production
-npm run deploy:preview    # a named preview environment
+npm run deploy:check                  # dry run — validates without uploading
+npm run deploy
 ```
 
-That builds the SPA, bundles the Functions and uploads both. Nothing about the
-deployment depends on CI, so this is also the fastest way to get a first
-version live before wiring anything else up.
-
-### Optional AI credentials
-
-The Brief and rationale features need an Azure AI Foundry deployment. Set the
-credentials as **application settings** so the key never enters the repository
-or the browser:
-
-```bash
-az staticwebapp appsettings set --name palette-studio \
-  --setting-names AZURE_AI_ENDPOINT=https://<resource>.openai.azure.com \
-                  AZURE_AI_DEPLOYMENT=<deployment-name> \
-                  AZURE_AI_API_KEY=<key>
-```
-
-Without them the app is fully functional; the Brief panel simply reports itself
-inactive, because `GET /api/ai` is a capability probe rather than an assumption.
+**[DEPLOY.md](DEPLOY.md) is the full guide**: GitHub Actions as an alternative,
+verifying the live deployment, optional AI credentials, custom domains, costs
+and troubleshooting.
 
 ### The API project
 
