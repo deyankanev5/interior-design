@@ -270,10 +270,13 @@ only — it is not an open proxy. Boards are not supported, only pins.
 Deploying the static build without the Functions is fine: the pin route reports that cleanly, and
 drag-drop, paste and direct image URLs all still work.
 
-## Deploying to Azure
+## Putting it online
 
-Static Web Apps on the **Free** tier: £0/month, and it stops serving past its
-quota rather than billing overage, so there is no path to a surprise invoice.
+Free hosting on Azure Static Web Apps. **[DEPLOY.md](DEPLOY.md) is a
+step-by-step guide written for non-technical users** — mostly clicking, with a
+command-line alternative and a technical reference at the end.
+
+The short version, if you are comfortable in a terminal:
 
 ```bash
 az login
@@ -283,10 +286,6 @@ export SWA_CLI_DEPLOYMENT_TOKEN='<token>'
 npm run deploy:check                  # validates the build; contacts nothing
 npm run deploy
 ```
-
-**[DEPLOY.md](DEPLOY.md) is the full guide**: GitHub Actions as an alternative,
-verifying the live deployment, optional AI credentials, custom domains, costs
-and troubleshooting.
 
 ### The API project
 
