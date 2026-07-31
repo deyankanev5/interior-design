@@ -75,14 +75,18 @@ npm ci
 npm run deploy:check
 ```
 
-This builds the SPA, bundles the Functions and runs the deployment in **dry-run**
-mode. A healthy run ends with:
+This builds the SPA, bundles and exercises the Functions, then validates
+everything that can be validated without contacting Azure — that the bundle
+exists and is referenced by `index.html`, that the SPA fallback does not
+swallow `/api/*`, that `api/package.json` points at the built handlers, and
+that the declared API runtime matches what the deploy scripts pass. A healthy
+run ends with `Ready to deploy.` and exits 0.
 
-```
-Deploying front-end files from folder:  .../dist
-Deploying API from folder:              .../api
-Deploying to environment: production
-Found configuration file:               .../staticwebapp.config.json
+Once you have a real token you can also exercise the true upload path without
+publishing anything:
+
+```bash
+SWA_CLI_DEPLOYMENT_TOKEN='<token>' npm run deploy -- --dry-run
 ```
 
 ### 3. Deploy
@@ -224,7 +228,7 @@ already uses it; the error means the workflow was renamed.
 
 **API routes return 404 after deploying** — `api/dist` was not built. `npm run
 deploy` handles this, but a hand-rolled `swa deploy` needs `npm run build:api`
-first.
+first. `npm run deploy:check` catches it before you upload.
 
 **Functions fail to start** — check the runtime matches:
 `staticwebapp.config.json` declares `node:20` and the deploy scripts pass

@@ -280,7 +280,7 @@ az login
 ./infra/deploy.sh palette-studio      # provisions, prints the deployment token
 
 export SWA_CLI_DEPLOYMENT_TOKEN='<token>'
-npm run deploy:check                  # dry run — validates without uploading
+npm run deploy:check                  # validates the build; contacts nothing
 npm run deploy
 ```
 
