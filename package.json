@@ -11,7 +11,9 @@
     "smoke": "node scripts/smoke.mjs",
     "typecheck": "tsc -b",
     "build:api": "npm --prefix api ci && npm --prefix api run build",
-    "verify:api": "npm --prefix api run verify"
+    "verify:api": "npm --prefix api run verify",
+    "deploy": "npm run build && npm run build:api && npx --yes @azure/static-web-apps-cli@2 deploy ./dist --api-location ./api --env production",
+    "deploy:preview": "npm run build && npm run build:api && npx --yes @azure/static-web-apps-cli@2 deploy ./dist --api-location ./api"
   },
   "dependencies": {
     "react": "^19.2.8",

@@ -296,6 +296,22 @@ The token is scoped to that one Static Web App — it grants no other access to
 the subscription, which is why it is the credential to hand to CI rather than a
 service principal.
 
+### Deploying without GitHub Actions
+
+Actions is convenient, not required — a private repository with no Actions
+minutes left cannot run it at all. The same deployment works straight from a
+workstation with only the deployment token:
+
+```bash
+export SWA_CLI_DEPLOYMENT_TOKEN='<token>'
+npm run deploy            # production
+npm run deploy:preview    # a named preview environment
+```
+
+That builds the SPA, bundles the Functions and uploads both. Nothing about the
+deployment depends on CI, so this is also the fastest way to get a first
+version live before wiring anything else up.
+
 ### Optional AI credentials
 
 The Brief and rationale features need an Azure AI Foundry deployment. Set the
