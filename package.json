@@ -9,7 +9,9 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "smoke": "node scripts/smoke.mjs",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "build:api": "npm --prefix api ci && npm --prefix api run build",
+    "verify:api": "npm --prefix api run verify"
   },
   "dependencies": {
     "react": "^19.2.8",

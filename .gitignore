@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 .smoke/
+
+# Azure Functions build output
+api/dist
+api/node_modules
+.func/

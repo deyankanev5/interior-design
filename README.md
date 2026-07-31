@@ -252,12 +252,13 @@ src/
   state/                  store with undo/redo, named presets, URL codec
   features/               UI, one folder per panel
 server/                   runtime-agnostic /api handlers (Pinterest, Azure AI)
-api/                      serverless entry points for the same handlers
+api/                      Azure Functions app wrapping those handlers
+infra/                    Bicep template + provisioning script for Azure
 scripts/                  catalogue scrapers + end-to-end smoke test
 ```
 
-`server/` is shared: the Vite dev/preview middleware and the deployed serverless functions call
-the identical handler, so local and production behaviour cannot drift.
+`server/` is shared: the Vite dev/preview middleware and the deployed Azure Functions call the
+identical handler, so local and production behaviour cannot drift.
 
 ### Pinterest import
 
@@ -266,8 +267,70 @@ so both resolution and image fetching go through `/api/pinterest`. It resolves a
 keyless oEmbed endpoint, falls back to the Open Graph tag, and proxies images from `pinimg.com`
 only — it is not an open proxy. Boards are not supported, only pins.
 
-Deploying the static build without the serverless functions is fine: the pin route reports that
-cleanly, and drag-drop, paste and direct image URLs all still work.
+Deploying the static build without the Functions is fine: the pin route reports that cleanly, and
+drag-drop, paste and direct image URLs all still work.
+
+## Deploying to Azure
+
+Target is **Azure Static Web Apps**: the built SPA on the CDN, and the two API
+routes as managed Functions. The Free tier covers a studio-sized deployment.
+
+```bash
+az login
+./infra/deploy.sh palette-studio
+```
+
+That creates the resource group and the Static Web App from `infra/main.bicep`
+and prints a **deployment token**. Store it as the repository secret
+`AZURE_STATIC_WEB_APPS_API_TOKEN`:
+
+```bash
+gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN --body '<token>'
+```
+
+Every push to `main` then runs `.github/workflows/azure-static-web-apps.yml`,
+which typechecks, lints, builds, verifies the Functions bundles and deploys.
+Pull requests get their own preview URL, torn down when the PR closes.
+
+The token is scoped to that one Static Web App — it grants no other access to
+the subscription, which is why it is the credential to hand to CI rather than a
+service principal.
+
+### Optional AI credentials
+
+The Brief and rationale features need an Azure AI Foundry deployment. Set the
+credentials as **application settings** so the key never enters the repository
+or the browser:
+
+```bash
+az staticwebapp appsettings set --name palette-studio \
+  --setting-names AZURE_AI_ENDPOINT=https://<resource>.openai.azure.com \
+                  AZURE_AI_DEPLOYMENT=<deployment-name> \
+                  AZURE_AI_API_KEY=<key>
+```
+
+Without them the app is fully functional; the Brief panel simply reports itself
+inactive, because `GET /api/ai` is a capability probe rather than an assumption.
+
+### The API project
+
+`api/` is a self-contained Azure Functions app (Node v4 programming model) that
+wraps the same runtime-agnostic handlers in `server/`. esbuild bundles them, so
+the shared code is inlined and there is no cross-package build ordering to get
+wrong.
+
+```bash
+npm run build:api     # bundle the Functions
+npm run verify:api    # exercise them without the Functions host
+```
+
+`api/verify.mjs` stubs `@azure/functions` to capture the registered handlers and
+calls them directly. It checks the part most likely to break after a runtime
+change — the adapter between Azure's HTTP model and the Web `Request`/`Response`
+handlers — including that the image proxy still refuses non-Pinterest hosts.
+
+Hosting elsewhere means writing an equivalent 10-line wrapper around
+`server/handler.ts`; nothing in `server/` is Azure-specific.
 
 ## Tests
 

@@ -1,0 +1,21 @@
+{
+  "name": "palette-studio-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Azure Functions for Palette Studio: Pinterest resolution and the optional Azure AI Foundry proxy",
+  "main": "dist/functions/*.js",
+  "scripts": {
+    "build": "esbuild src/functions/*.ts --bundle --platform=node --target=node20 --format=cjs --outdir=dist/functions --external:@azure/functions",
+    "typecheck": "tsc --noEmit",
+    "prestart": "npm run build",
+    "start": "func start",
+    "verify": "node verify.mjs"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.7.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "typescript": "~6.0.2"
+  }
+}

@@ -1,0 +1,82 @@
+name: Deploy to Azure Static Web Apps
+
+# Deploys the built SPA plus the two managed Functions in api/.
+#
+# Requires one repository secret, AZURE_STATIC_WEB_APPS_API_TOKEN — the
+# deployment token from the Static Web App's "Manage deployment token" panel.
+# It is scoped to that one resource, so it cannot touch anything else in the
+# subscription.
+#
+# Azure AI credentials are NOT set here. They belong in the Static Web App's
+# Application Settings, so the key never passes through the repository.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: swa-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Typecheck, lint & build
+    runs-on: ubuntu-latest
+    if: github.event.action != 'closed'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx oxlint
+      - run: npm run build
+
+      # The Functions bundles are exercised without the Functions host, which
+      # catches adapter regressions that a plain typecheck cannot.
+      - run: npm run build:api
+      - run: npm run verify:api
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: verify
+    if: github.event.action != 'closed'
+    environment:
+      name: ${{ github.event_name == 'pull_request' && 'preview' || 'production' }}
+      url: ${{ steps.swa.outputs.static_web_app_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and deploy
+        id: swa
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: /
+          api_location: api
+          output_location: dist
+
+  close_preview:
+    name: Tear down preview
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    steps:
+      - name: Close staging environment
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: close
