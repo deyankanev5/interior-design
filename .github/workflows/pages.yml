@@ -2,9 +2,11 @@ name: Deploy to GitHub Pages
 
 # Publishes the built app to GitHub Pages on every push to main.
 #
-# One-time setup in the repository: Settings -> Pages -> Build and deployment
-# -> Source: "GitHub Actions". No secrets and no tokens are needed; the job
-# authenticates with the id-token permission below.
+# No secrets or tokens are needed; the job authenticates with the id-token
+# permission below, and configure-pages enables Pages on first run.
+#
+# If the very first deployment fails before starting, check
+# Settings -> Pages -> Build and deployment -> Source is "GitHub Actions".
 #
 # The repository must be public for Pages to be free, and a public repository
 # also gets unlimited Actions minutes — which is what makes this work at all.
@@ -27,6 +29,15 @@ jobs:
   build:
     name: Build & verify
     runs-on: ubuntu-latest
+
+    # pages: write lets configure-pages turn Pages on by itself, so the
+    # deployment does not silently depend on someone having set
+    # Settings -> Pages -> Source to "GitHub Actions" by hand.
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
     steps:
       - uses: actions/checkout@v4
 
@@ -47,6 +58,8 @@ jobs:
 
       - uses: actions/configure-pages@v5
         if: github.event_name != 'pull_request'
+        with:
+          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'
