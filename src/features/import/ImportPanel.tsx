@@ -83,19 +83,16 @@ export function ImportPanel({ onClose, onToast }: { onClose: () => void; onToast
     const url = pinUrl.trim();
     if (!url) return;
 
+    // Pinterest serves pin pages and its images without CORS headers, so a
+    // browser can neither resolve a pin nor read the pixels of one of its
+    // images. There is no client-side workaround; saving or copying the image
+    // sidesteps it entirely and is what the panel steers people toward.
     if (/pinterest\.|pin\.it/.test(url)) {
-      setStatus({ kind: 'busy', message: 'Resolving pin…' });
-      try {
-        const res = await fetch(`/api/pinterest?url=${encodeURIComponent(url)}`);
-        const data = (await res.json()) as { proxyUrl?: string; error?: string };
-        if (!res.ok || !data.proxyUrl) throw new Error(data.error ?? 'Could not resolve that pin.');
-        await runExtraction(() => loadImageFromUrl(data.proxyUrl!), data.proxyUrl!, 'Reading pin image…');
-      } catch (e) {
-        setStatus({
-          kind: 'error',
-          message: `${(e as Error).message} If the Pinterest endpoint is not deployed, right-click the pin, choose “Copy image address”, and paste that instead — or just drop the image file below.`,
-        });
-      }
+      setStatus({
+        kind: 'error',
+        message:
+          'Pinterest blocks other sites from reading its pages and images, so a pin link cannot be opened here. Instead: right-click the pin and choose “Copy image”, then press Ctrl+V (⌘V) below — or save the image and drop it in. Both work perfectly.',
+      });
       return;
     }
 
@@ -116,11 +113,11 @@ export function ImportPanel({ onClose, onToast }: { onClose: () => void; onToast
   return (
     <Panel title="Import a reference" onClose={onClose}>
       <div className="section">
-        <h3>Pinterest pin or image URL</h3>
+        <h3>Image address</h3>
         <div className="row">
           <input
             className="input"
-            placeholder="pinterest.com/pin/… or a direct image URL"
+            placeholder="https://… a direct link to an image file"
             value={pinUrl}
             spellCheck={false}
             onChange={(e) => setPinUrl(e.target.value)}
@@ -132,13 +129,14 @@ export function ImportPanel({ onClose, onToast }: { onClose: () => void; onToast
           </button>
         </div>
         <p className="faint">
-          Pin URLs are resolved by this app's own <code>/api/pinterest</code> endpoint, which also proxies the image so
-          its pixels can be read. Boards are not supported — pins only.
+          Works when the image is hosted somewhere that allows other sites to read it. Many hosts — Pinterest and
+          Instagram among them — do not, and there is no way around that from a web page. For those, copy or save the
+          image and use one of the routes below; the result is identical.
         </p>
       </div>
 
       <div className="section">
-        <h3>Or drop a file</h3>
+        <h3>Paste or drop an image — always works</h3>
         <label
           className={`drop${over ? ' over' : ''}`}
           onDragOver={(e) => {

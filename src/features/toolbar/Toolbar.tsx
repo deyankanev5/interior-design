@@ -16,7 +16,6 @@ export type PanelKind =
   | 'export'
   | 'variations'
   | 'room'
-  | 'brief'
   | 'about'
   | null;
 
@@ -96,10 +95,6 @@ export function Toolbar({
 
       <div className="spacer" />
 
-      <button className={btn(panel === 'brief')} onClick={() => toggle('brief')} title="Describe the room in prose (optional, needs Azure AI)">
-        <Icon name="sparkle" />
-        <span className="btn-label">Brief</span>
-      </button>
       <button className={btn(panel === 'variations')} onClick={() => toggle('variations')} title="Compare whole schemes side by side">
         <Icon name="grid" />
         <span className="btn-label">Variations</span>

@@ -21,7 +21,6 @@ export type IconName =
   | 'right'
   | 'swap'
   | 'pencil'
-  | 'sparkle'
   | 'link';
 
 const PATHS: Record<IconName, string> = {
@@ -47,7 +46,6 @@ const PATHS: Record<IconName, string> = {
   right: 'm10 5 7 7-7 7',
   swap: 'M4 8h13l-3-3M20 16H7l3 3',
   pencil: 'M4 20h4L20 8l-4-4L4 16zM14 6l4 4',
-  sparkle: 'M12 3v6M12 15v6M3 12h6M15 12h6M6.3 6.3l3 3M14.7 14.7l3 3M17.7 6.3l-3 3M9.3 14.7l-3 3',
   link: 'M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1',
 };
 

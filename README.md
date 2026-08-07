@@ -42,9 +42,9 @@ for exploring and poor for deciding.
 surface separation, undertone coherence, chroma at scale, accent strength, material variety,
 daylight/LRV — each with a plain-language finding you could paste into a client email.
 
-**Reference import.** Pinterest pin URL, direct image URL, drag-and-drop, or `Ctrl+V` a
-screenshot. Colours are extracted by k-means in Oklab and assigned to slots by role fit, then
-optionally snapped to the nearest real material.
+**Reference import.** Drag-and-drop, `Ctrl+V` a screenshot, or a direct image URL. Colours are
+extracted by k-means in Oklab and assigned to slots by role fit, then optionally snapped to the
+nearest real material.
 
 **Named rooms.** Save schemes as `Bedroom`, `Kitchen`, `Flat 3 — hallway`; load, rename, update
 and export/import the whole set as JSON. The current scheme also lives in the URL, so the
@@ -148,26 +148,10 @@ It also handles the multi-suggestion requirement better. "Show me several good o
 slot at once" is a ranking problem over a known candidate set — exactly what a scoring function
 does well and what a chat completion does awkwardly and slowly.
 
-**Where AI does earn its place is language, and only language.** Two optional features run
-through Azure AI Foundry:
-
-- **Brief** — turn "small north-facing bedroom, calm and warm, oak joinery" into *constraints*:
-  a harmony scheme, a mood, and which surfaces the room needs. The engine then fills those slots
-  from the real catalogue. The model never names a product, never sees a decor code, and its
-  output is clamped to the enumerated values the engine accepts before anything is applied.
-- **Client-facing rationale** — draft the paragraph that accompanies a finish schedule, from the
-  scheme as specified plus the engine's own review findings.
-
-Both are off unless configured, and the app is fully functional without them.
-
-```bash
-AZURE_AI_ENDPOINT=https://<resource>.openai.azure.com
-AZURE_AI_API_KEY=<key from the Foundry portal>
-AZURE_AI_DEPLOYMENT=<deployment name>
-AZURE_AI_API_VERSION=2024-10-21   # optional
-```
-
-The key is read server-side by `/api/ai` and never reaches the browser.
+An AI layer was built and then removed. It only ever did two language things —
+turning a written brief into engine settings, and drafting a client-facing paragraph — and
+neither was load-bearing. Removing it means no keys to manage, no per-use billing and no server,
+which is what lets the whole app run as free static hosting.
 
 ### Why Oklab everywhere
 
@@ -251,61 +235,32 @@ src/
     generate.ts           constrained generation, variations, per-slot suggestions
   state/                  store with undo/redo, named presets, URL codec
   features/               UI, one folder per panel
-server/                   runtime-agnostic /api handlers (Pinterest, Azure AI)
-api/                      Azure Functions app wrapping those handlers
-infra/                    Bicep template + provisioning script for Azure
-scripts/                  catalogue scrapers + end-to-end smoke test
+scripts/                  catalogue scrapers, Pages check, end-to-end smoke test
 ```
 
-`server/` is shared: the Vite dev/preview middleware and the deployed Azure Functions call the
-identical handler, so local and production behaviour cannot drift.
+There is no server. Everything runs in the browser, which is why the app can be hosted as
+static files for free and works offline once loaded.
 
-### Pinterest import
+### Reference import
 
-Pinterest sends no CORS headers, and reading pixels from a cross-origin image taints the canvas,
-so both resolution and image fetching go through `/api/pinterest`. It resolves a pin via the
-keyless oEmbed endpoint, falls back to the Open Graph tag, and proxies images from `pinimg.com`
-only — it is not an open proxy. Boards are not supported, only pins.
-
-Deploying the static build without the Functions is fine: the pin route reports that cleanly, and
-drag-drop, paste and direct image URLs all still work.
+Clipboard paste, drag-and-drop and direct image URLs, with colours extracted by k-means in
+Oklab. Pinterest *pin links* are not supported: Pinterest serves neither its pages nor its
+images with CORS headers, so a browser cannot read them and no client-side workaround exists.
+Copying the image and pasting it works, and the panel says so rather than failing silently.
 
 ## Putting it online
 
-Free hosting on Azure Static Web Apps. **[DEPLOY.md](DEPLOY.md) is a
-step-by-step guide written for non-technical users** — mostly clicking, with a
-command-line alternative and a technical reference at the end.
-
-The short version, if you are comfortable in a terminal:
-
-```bash
-az login
-./infra/deploy.sh palette-studio      # provisions, prints the deployment token
-
-export SWA_CLI_DEPLOYMENT_TOKEN='<token>'
-npm run deploy:check                  # validates the build; contacts nothing
-npm run deploy
-```
-
-### The API project
-
-`api/` is a self-contained Azure Functions app (Node v4 programming model) that
-wraps the same runtime-agnostic handlers in `server/`. esbuild bundles them, so
-the shared code is inlined and there is no cross-package build ordering to get
-wrong.
+**[DEPLOY.md](DEPLOY.md)** is a step-by-step guide written for non-technical users. The short
+version: make the repository public, set Settings → Pages → Source to **GitHub Actions**, and
+merge to `main`. It publishes to `https://<user>.github.io/<repo>/` within a couple of minutes,
+free, with no account or card required.
 
 ```bash
-npm run build:api     # bundle the Functions
-npm run verify:api    # exercise them without the Functions host
+npm run check:pages    # build, then assert the deployment cannot silently break
 ```
 
-`api/verify.mjs` stubs `@azure/functions` to capture the registered handlers and
-calls them directly. It checks the part most likely to break after a runtime
-change — the adapter between Azure's HTTP model and the Web `Request`/`Response`
-handlers — including that the image proxy still refuses non-Pinterest hosts.
-
-Hosting elsewhere means writing an equivalent 10-line wrapper around
-`server/handler.ts`; nothing in `server/` is Azure-specific.
+That check catches the three things that produce a blank page rather than an error: a base path
+that does not match the repository, a missing `.nojekyll`, and a missing `404.html` fallback.
 
 ## Tests
 

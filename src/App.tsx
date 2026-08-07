@@ -11,7 +11,6 @@ import { ExportPanel } from './features/export/ExportPanel';
 import { VariationsPanel } from './features/variations/VariationsPanel';
 import { RoomPanel } from './features/room/RoomPanel';
 import { AboutPanel } from './features/about/AboutPanel';
-import { BriefPanel } from './features/ai/BriefPanel';
 import { copyText } from './features/export/download';
 
 export default function App() {
@@ -130,7 +129,6 @@ export default function App() {
         {panel === 'export' && <ExportPanel onClose={closePanel} onToast={notify} />}
         {panel === 'variations' && <VariationsPanel onClose={closePanel} onToast={notify} />}
         {panel === 'room' && <RoomPanel onClose={closePanel} />}
-        {panel === 'brief' && <BriefPanel onClose={closePanel} onToast={notify} />}
         {panel === 'about' && <AboutPanel onClose={closePanel} />}
       </div>
 

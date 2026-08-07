@@ -124,10 +124,19 @@ console.log('\nroom svg present:', await page.locator('.panel svg.room').count()
 await page.screenshot({ path: `${SHOT}/shot-room.png` });
 await page.keyboard.press('Escape');
 
-// ---- brief panel degrades cleanly without Azure ----------------------------
-await page.click('.toolbar button[title*="Describe the room"]');
-await page.waitForTimeout(900);
-console.log('brief panel copy:', (await page.locator('.panel .muted').first().textContent())?.slice(0, 90));
+// ---- no AI surface remains --------------------------------------------------
+console.log('\n=== AI removed ===');
+console.log('brief button absent:', (await page.locator('.toolbar button:has-text("Brief")').count()) === 0);
+
+// ---- import works without a server ------------------------------------------
+await page.click('.toolbar button[title*="Import from"]');
+await page.waitForTimeout(500);
+await page.fill('.panel input.input', 'https://www.pinterest.com/pin/12345/');
+await page.click('.panel button:has-text("Fetch")');
+await page.waitForTimeout(600);
+const pinMsg = await page.locator('.panel .err').first().textContent().catch(() => null);
+console.log('pinterest link explained, not silently broken:', /Copy image/.test(pinMsg ?? ''));
+console.log('drop zone present:', (await page.locator('.panel .drop').count()) === 1);
 await page.keyboard.press('Escape');
 
 // ---- export ----------------------------------------------------------------

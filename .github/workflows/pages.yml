@@ -1,0 +1,72 @@
+name: Deploy to GitHub Pages
+
+# Publishes the built app to GitHub Pages on every push to main.
+#
+# One-time setup in the repository: Settings -> Pages -> Build and deployment
+# -> Source: "GitHub Actions". No secrets and no tokens are needed; the job
+# authenticates with the id-token permission below.
+#
+# The repository must be public for Pages to be free, and a public repository
+# also gets unlimited Actions minutes — which is what makes this work at all.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build & verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx oxlint
+      - run: npm run build
+
+      # The base path has to match the repository name or Pages serves a blank
+      # page, and .nojekyll must survive or Jekyll strips parts of the output.
+      - name: Check the Pages build
+        run: node scripts/check-pages.mjs
+
+      - uses: actions/configure-pages@v5
+        if: github.event_name != 'pull_request'
+
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
+        with:
+          path: dist
+
+  deploy:
+    name: Publish
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

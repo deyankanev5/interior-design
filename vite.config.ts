@@ -1,52 +1,39 @@
+import { copyFileSync } from 'node:fs';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
-import { handleAi, handlePinterest } from './server/handler.ts';
 
 /**
- * Serves /api/* during `vite dev` and `vite preview` using the same handlers
- * the deployed serverless functions use, so local development and production
- * behave identically.
+ * GitHub Pages serves a project site from a subdirectory —
+ * `https://<user>.github.io/<repo>/` — so every asset URL has to be prefixed
+ * with the repository name. Getting this wrong is the classic Pages failure:
+ * the page loads, finds nothing at `/assets/…`, and renders blank.
+ *
+ * Override with BASE_PATH when publishing somewhere else, e.g. `BASE_PATH=/`
+ * for a custom domain or a user site.
  */
-function apiRoutes(): Plugin {
-  const middleware = async (
-    req: { url?: string; method?: string; on: (e: string, cb: (c?: unknown) => void) => void },
-    res: {
-      statusCode: number;
-      setHeader(k: string, v: string): void;
-      end(chunk?: unknown): void;
-    },
-    next: () => void,
-  ) => {
-    if (!req.url?.startsWith('/api/')) return next();
+const base = process.env.BASE_PATH ?? '/interior-design/';
 
-    const method = req.method ?? 'GET';
-    const body = method === 'POST' ? await readBody(req) : undefined;
-    const request = new Request(`http://localhost${req.url}`, { method, body });
-
-    const response = req.url.startsWith('/api/ai')
-      ? await handleAi(request, process.env)
-      : await handlePinterest(request);
-
-    res.statusCode = response.status;
-    response.headers.forEach((value, key) => res.setHeader(key, value));
-    res.end(Buffer.from(await response.arrayBuffer()));
-  };
-
+/**
+ * Pages has no server-side rewrites, so a deep link is a real 404. Serving the
+ * app from 404.html as well means those requests still land on the app, which
+ * then reads the scheme out of the URL fragment as usual.
+ */
+function pagesFallback(): Plugin {
   return {
-    name: 'api-routes',
-    configureServer: (server) => void server.middlewares.use(middleware),
-    configurePreviewServer: (server) => void server.middlewares.use(middleware),
+    name: 'pages-404-fallback',
+    apply: 'build',
+    closeBundle() {
+      copyFileSync('dist/index.html', 'dist/404.html');
+    },
   };
-}
-
-function readBody(req: { on: (e: string, cb: (c?: unknown) => void) => void }): Promise<string> {
-  return new Promise((resolve) => {
-    const chunks: Buffer[] = [];
-    req.on('data', (c) => chunks.push(Buffer.from(c as Uint8Array)));
-    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
-  });
 }
 
 export default defineConfig({
-  plugins: [react(), apiRoutes()],
+  base,
+  plugins: [react(), pagesFallback()],
+  build: {
+    // Pages is a CDN with no build step of its own; keep the output plain.
+    target: 'es2022',
+    sourcemap: false,
+  },
 });
