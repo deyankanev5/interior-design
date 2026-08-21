@@ -1,0 +1,13 @@
+{
+  "kitVersion": "1.0.0",
+  "stack": "node",
+  "trunk": "main",
+  "verify": "./scripts/verify.sh",
+  "portfolio": [
+    "deyankanev5/alni",
+    "deyankanev5/psychiatry.bg",
+    "deyankanev5/interior-design",
+    "kriskodo/bg-jobs",
+    "deyankanev5/Psychiatry-App"
+  ]
+}
