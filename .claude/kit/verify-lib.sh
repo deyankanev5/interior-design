@@ -22,18 +22,33 @@
 set -uo pipefail
 PASSED=(); FAILED=(); SKIPPED=(); OPTIONAL=(); RAN=0
 
+# Defined before first use: _kit_required calls it during sourcing.
+have() { command -v "$1" >/dev/null 2>&1; }
+
+# Reading requiredChecks must never fail open. An earlier version swallowed a
+# failing python3, so on a machine without it (Git Bash, commonly) the required
+# list silently became empty and every required check degraded to a soft skip —
+# the gate disarming itself exactly where nobody would look.
 _kit_required() {
-  [ -f .claude/kit.json ] || return 0
-  python3 - <<'PY' 2>/dev/null || true
-import json
+  [ -f .claude/kit.json ] || { echo ""; return 0; }
+  if ! have python3; then
+    printf '\033[31mVERIFY CANNOT RUN\033[0m - python3 is needed to read\n' >&2
+    printf '.claude/kit.json (requiredChecks). Without it this gate would silently\n' >&2
+    printf 'downgrade every required check to a skip. Install python3 and re-run.\n' >&2
+    return 1
+  fi
+  python3 -c 'import json,sys
 try:
     cfg = json.load(open(".claude/kit.json"))
-except Exception:
-    raise SystemExit(0)
-print(" ".join(cfg.get("requiredChecks", [])))
-PY
+except Exception as e:
+    sys.stderr.write("cannot parse .claude/kit.json: %s\n" % e); sys.exit(1)
+print(" ".join(cfg.get("requiredChecks", [])))'
 }
-REQUIRED_CHECKS=" $(_kit_required) "
+if ! _KIT_REQ=$(_kit_required); then
+  printf '\033[31mVERIFY FAILED\033[0m - cannot determine which checks are required.\n' >&2
+  exit 1
+fi
+REQUIRED_CHECKS=" $_KIT_REQ "
 
 _is_required() { case "$REQUIRED_CHECKS" in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
 
@@ -55,13 +70,19 @@ skip() {           # skip <name> <reason>
   fi
 }
 
-# Genuinely not applicable here. Recorded, never fails.
+# Genuinely not applicable here - but a check the project declares as required
+# is never "not applicable". Without this guard, deleting tests/ in a repo whose
+# requiredChecks lists pytest turned the gate green.
 optional() {       # optional <name> <reason>
+  if _is_required "$1"; then
+    printf '\n\033[31m── %s — DID NOT RUN: %s\033[0m\n' "$1" "$2"
+    printf '   (declared in requiredChecks, so this is a failure, not an exemption)\n'
+    FAILED+=("$1 — required check did not run: $2")
+    return
+  fi
   printf '\n\033[2m── %s — n/a: %s\033[0m\n' "$1" "$2"
   OPTIONAL+=("$1 ($2)")
 }
-
-have() { command -v "$1" >/dev/null 2>&1; }
 
 # Distinguishes "node is missing", "package.json is unreadable" and "the script
 # is genuinely not defined" — previously all three collapsed into one false

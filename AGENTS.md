@@ -1,6 +1,6 @@
 
 <!-- kit:section:start -->
-## Working alongside other agents in this repo (kit v1.2.0)
+## Working alongside other agents in this repo (kit v1.2.1)
 
 This repository is worked by several agents at once — Codex, Claude Code
 sessions, possibly more. They coordinate through one protocol, and it only works
