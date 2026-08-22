@@ -58,9 +58,21 @@ Before writing a single file:
 7. Push, open the PR with a kit:scope block.
 ```
 
+```
+8. Re-list open PRs. An overlapping claim created BEFORE yours wins —
+   close yours and apply §5. Ties break on the earlier createdAt.
+```
+
 The PR is created **before the implementation work**, not after. It carries no
 code yet. Its job at this moment is to be the claim — a lock every other agent
 and provider can read with one API call.
+
+**Step 8 is not optional.** Steps 1–7 are a read followed by a write with a gap
+of a minute or more between them, so two agents starting seconds apart both read
+an empty list and both publish. Re-reading after publishing is what closes that
+window; without it the collision surfaces at merge, which is the exact failure
+§1 says this protocol exists to prevent. The earlier `createdAt` wins, so the
+outcome is deterministic and both agents compute the same answer.
 
 ### The scope block
 
@@ -127,6 +139,21 @@ You wanted a file another open track owns. In order of preference:
 
 Never "just edit it and sort it out at merge." That is the failure mode.
 
+### Two exceptions, so the rules stay livable
+
+**`docs/STATE.md` is shared and exempt from scope.** Every track updates it and
+every session writes it at handoff. Claiming it would make every pair of tracks
+overlap; not claiming it would make every track's final write out-of-scope and
+therefore an automatic escalation. So it is owned by nobody, appended by
+everybody, and conflicts there are resolved by keeping both entries.
+
+**A claim expires.** A track whose PR has had no commit for **three days** is
+dead, and any agent may close it, saying so in a comment. Without this, one
+crashed session holds a directory forever and every later track is routed into
+§5 option 4 — asking the human — which is precisely the interruption the
+autonomy model exists to remove. `/kickoff` and `/standup` flag tracks over two
+days so this is visible a day before it bites.
+
 ## 6. Trunk
 
 Trunk is named in `.claude/kit.json`, because it is not `main` everywhere.
@@ -154,7 +181,17 @@ The reviewer **must escalate rather than merge** when the diff contains any of:
 - public-facing copy, where the project has a tone-of-voice standard
 - a dependency added or a version pinned
 - a change outside the track's declared `owns`
+- **a change to the gate itself** — `scripts/verify.sh`, CI configuration,
+  `.claude/**`, or this protocol
 - its own honest uncertainty about whether the change is correct
+
+That gate-itself category is the one a green build cannot protect you from.
+A track narrows a lint glob, adds `--passWithNoTests`, or drops a `step` line:
+verify passes, because verify *is* the weakened script; CI passes, because it
+runs the same script; the reviewer sees an in-scope build-script tweak and
+clears it. Every later track then merges through a weaker gate and nobody sees
+it, because merges are silent by design. Editing `.claude/agents/reviewer.md`
+is the same move aimed at the reviewer.
 
 Escalation is not failure. A reviewer that never escalates is not reviewing, and
 the whole model rests on the escalations being trustworthy.

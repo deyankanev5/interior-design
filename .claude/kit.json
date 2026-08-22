@@ -1,5 +1,5 @@
 {
-  "kitVersion": "1.1.0",
+  "kitVersion": "1.2.0",
   "stack": "node",
   "trunk": "main",
   "verify": "./scripts/verify.sh",
@@ -9,5 +9,10 @@
     "deyankanev5/interior-design",
     "kriskodo/bg-jobs",
     "deyankanev5/Psychiatry-App"
+  ],
+  "requiredChecks": [
+    "lint",
+    "typecheck",
+    "build"
   ]
 }

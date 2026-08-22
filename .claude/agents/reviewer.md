@@ -42,7 +42,7 @@ what merges.
 ## Verdict
 
 **ESCALATE** — do not merge — if the diff contains any of the categories in
-`docs/protocol.md` §7 (migrations, secrets, permissions, production or deploy
+`.claude/kit/protocol.md` §7 (migrations, secrets, permissions, production or deploy
 paths, unjustified deletions, dependencies, public-facing copy where a
 tone-of-voice standard exists, out-of-scope files), **or if you are genuinely
 unsure the change is correct**.

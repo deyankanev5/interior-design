@@ -5,9 +5,16 @@ cd "$(dirname "$0")/.." || exit 1
 
 PM=npm; [ -f pnpm-lock.yaml ] && PM=pnpm
 
-if has_script lint;      then step "lint"      $PM run lint;      else skip "lint" "no script"; fi
-if has_script typecheck; then step "typecheck" $PM run typecheck; else skip "typecheck" "no script"; fi
-if has_script test;      then step "test"      $PM run test;      else skip "test" "no script"; fi
-if has_script build;     then step "build"     $PM run build;     else skip "build" "no script"; fi
+# has_script distinguishes "node missing", "package.json unreadable" and "script
+# not defined" — all three used to collapse into one false reason and report a
+# skip. Whether a skip fails is decided by requiredChecks in .claude/kit.json,
+# so deleting a check that existed at install time now fails rather than passes.
+for c in lint typecheck test build; do
+  if reason=$(has_script "$c"); then
+    step "$c" $PM run "$c"
+  else
+    skip "$c" "$reason"
+  fi
+done
 
 summary

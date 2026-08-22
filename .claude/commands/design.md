@@ -4,6 +4,12 @@ argument-hint: <what to design>
 allowed-tools: Read, Grep, Glob, Bash, Write, Edit, WebSearch, WebFetch
 ---
 
+## Before you write anything
+
+This command writes files, so it is a track like any other: claim scope and work
+on a branch (`/build`), never straight on trunk. Running it beside an open track
+that owns the same paths is the collision the protocol exists to prevent.
+
 Design: **$ARGUMENTS**
 
 Use the `designer` agent. Do not let it skip to implementation — the two steps

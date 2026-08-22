@@ -1,5 +1,6 @@
 
-## Working with other agents in this repo (kit v1.1.0)
+<!-- kit:section:start -->
+## Working with other agents in this repo (kit v1.2.0)
 
 Several agents work this repository at once — Claude sessions in parallel, and
 sometimes Codex. **Read `.claude/kit/protocol.md` before your first edit of a
@@ -50,3 +51,4 @@ than merge on: migrations, secrets, permissions, production or deploy paths,
 unjustified deletions, new dependencies, public-facing copy where a tone standard
 exists, out-of-scope files, or your own genuine uncertainty. Escalation is not
 failure; a reviewer that never escalates is not reviewing.
+<!-- kit:section:end -->

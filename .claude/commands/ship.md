@@ -29,8 +29,17 @@ sequence. Never `|| warn` past one.
    scope globs and the CI result.
 
 6. **Merge or escalate.**
-   - `CLEAR` → enable auto-merge, squash. Update `docs/STATE.md`. Done.
+   - `CLEAR` → enable auto-merge, squash. Done.
    - `ESCALATE` → leave the PR open. Tell the human in **two lines**: what the
      track wanted to do, and the specific decision that needs them. Not the diff.
+
+**Update `docs/STATE.md` in step 3, before the review — never after it.** A
+write after the verdict is a commit nobody reviewed, and STATE.md is exempt from
+scope (`.claude/kit/protocol.md` §5) precisely so it can go in the reviewed diff.
+
+**A verdict belongs to a commit, not to a branch.** If you push anything after
+the reviewer cleared — a CI fix in step 4, anything — the verdict no longer
+covers the head. Re-run the reviewer on the new SHA. Auto-merge will otherwise
+merge a commit that was never reviewed.
 
 Report the outcome in one line: merged, or escalated and why.

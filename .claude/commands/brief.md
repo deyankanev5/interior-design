@@ -4,6 +4,12 @@ argument-hint: <topic or query>
 allowed-tools: Read, Grep, Glob, Bash, Write, WebSearch, WebFetch
 ---
 
+## Before you write anything
+
+This command writes files, so it is a track like any other: claim scope and work
+on a branch (`/build`), never straight on trunk. Running it beside an open track
+that owns the same paths is the collision the protocol exists to prevent.
+
 Produce a content brief for: **$ARGUMENTS**
 
 Use the `seo-researcher` agent. It must retrieve real data through the Semdash

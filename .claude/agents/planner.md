@@ -17,7 +17,7 @@ Read the code the goal touches — actually read it. A plan written from the
 directory listing is a guess, and it produces scope globs that are wrong, which
 is the one part of the plan that other agents depend on being right.
 
-Check open PRs for scope overlap (`docs/protocol.md` §3) before you propose
+Check open PRs for scope overlap (`.claude/kit/protocol.md` §3) before you propose
 globs. Proposing a scope that is already claimed wastes the whole track.
 
 ## The plan doc

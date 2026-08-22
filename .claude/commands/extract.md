@@ -4,6 +4,12 @@ argument-hint: <source and what to get from it>
 allowed-tools: Read, Grep, Glob, Bash, Write, Edit, WebSearch, WebFetch
 ---
 
+## Before you write anything
+
+This command writes files, so it is a track like any other: claim scope and work
+on a branch (`/build`), never straight on trunk. Running it beside an open track
+that owns the same paths is the collision the protocol exists to prevent.
+
 Data task: **$ARGUMENTS**
 
 Use the `data-analyst` agent. Hold it to these, which are the failure modes that

@@ -11,7 +11,7 @@ Execute the approved plan: **$ARGUMENTS**
 1. `git fetch origin <trunk>` (trunk is in `.claude/kit.json`).
 2. List open PRs and parse every `kit:scope` block.
 3. Intersect this plan's `owns` globs with every open track's globs.
-4. **Overlap → stop.** Apply `docs/protocol.md` §5 (narrow, wait, sequence, or
+4. **Overlap → stop.** Apply `.claude/kit/protocol.md` §5 (narrow, wait, sequence, or
    escalate) and report. Do not proceed on the assumption it will be fine.
 5. `git switch -c claude/<slug> origin/<trunk>`
 6. Commit **only the plan doc**.

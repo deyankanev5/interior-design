@@ -28,3 +28,6 @@ dist-ssr
 api/dist
 api/node_modules
 .func/
+
+# Regenerable screenshot output from scripts/design-shot.mjs
+design-shots/

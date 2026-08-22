@@ -4,6 +4,17 @@ argument-hint: <brief path or slug>
 allowed-tools: Read, Grep, Glob, Bash, Write, Edit, WebSearch, WebFetch
 ---
 
+## Before you write anything
+
+This command writes files, so it is a track like any other: claim scope and work
+on a branch (`/build`), never straight on trunk. Running it beside an open track
+that owns the same paths is the collision the protocol exists to prevent.
+
+Public-facing copy is an always-escalate category (`.claude/kit/protocol.md` §7).
+This draft does **not** merge on the strength of the writer agent alone — it goes
+through the same review gate as code, and the human sees it before it is
+published.
+
 Draft the piece specified by: **$ARGUMENTS**
 
 Use the `writer` agent. Before drafting, it reads the brief, the project's

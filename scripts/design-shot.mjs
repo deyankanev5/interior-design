@@ -14,6 +14,8 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createRequire } from "node:module";
+import { delimiter } from "node:path";
+import { execSync } from "node:child_process";
 
 const VIEWPORTS = [
   { name: "mobile",  width: 390,  height: 844  },
@@ -23,27 +25,61 @@ const VIEWPORTS = [
   { name: "wide",    width: 1728, height: 1080 },
 ];
 
+// Global install locations are discovered, not hardcoded: an earlier version
+// baked this sandbox's /opt/node22 path into repos driven from Windows Git Bash.
+function globalRoots() {
+  const roots = [];
+  if (process.env.NODE_PATH) roots.push(...process.env.NODE_PATH.split(delimiter));
+  try {
+    roots.push(execSync("npm root -g", { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim());
+  } catch {}
+  return roots.filter(Boolean);
+}
+
 async function loadPlaywright() {
   try { return await import("playwright"); } catch {}
-  // Fall back to the globally installed copy.
-  for (const base of ["/opt/node22/lib/node_modules", "/usr/lib/node_modules", "/usr/local/lib/node_modules"]) {
+  for (const base of globalRoots()) {
     try {
       const require = createRequire(join(base, "noop.js"));
       return await import(require.resolve("playwright"));
     } catch {}
   }
   throw new Error(
-    "playwright not found. Install it locally (`npm i -D playwright`) or globally.\n" +
-    "Do NOT run `playwright install` here — Chromium is preinstalled at " +
-    (process.env.PLAYWRIGHT_BROWSERS_PATH || "/opt/pw-browsers") + "."
+    "playwright not found. Install it locally (`npm i -D playwright`) or globally " +
+    "(`npm i -g playwright`).\nIf Chromium is already provided by the environment, " +
+    "set PLAYWRIGHT_BROWSERS_PATH, or CHROMIUM_PATH to the binary."
   );
 }
 
-const args = process.argv.slice(2);
-const url = args.find((a) => !a.startsWith("--")) || "http://localhost:3000";
-const outDir = (args.includes("--out") ? args[args.indexOf("--out") + 1] : null) || "design-shots";
-const settle = Number(args.includes("--wait") ? args[args.indexOf("--wait") + 1] : 400);
-const schemes = args.includes("--dark") ? ["light", "dark"] : ["light"];
+// Flag VALUES must not be eligible to become the URL: `--wait 800 <url>` used to
+// navigate to "800" and then blame the page for ten failed screenshots.
+const argv = process.argv.slice(2);
+const opts = { out: "design-shots", wait: "400", dark: false };
+const positional = [];
+for (let i = 0; i < argv.length; i++) {
+  const a = argv[i];
+  if (a === "--dark") { opts.dark = true; }
+  else if (a === "--out" || a === "--wait") {
+    const v = argv[++i];
+    if (v === undefined || v.startsWith("--")) {
+      console.error(`${a} requires a value`); process.exit(2);
+    }
+    opts[a.slice(2)] = v;
+  }
+  else if (a.startsWith("--")) { console.error(`unknown flag: ${a}`); process.exit(2); }
+  else positional.push(a);
+}
+if (positional.length > 1) { console.error(`expected one URL, got: ${positional.join(", ")}`); process.exit(2); }
+
+const url = positional[0] || "http://localhost:3000";
+const outDir = opts.out;
+const settle = Number.isFinite(Number(opts.wait)) ? Number(opts.wait) : 400;
+const schemes = opts.dark ? ["light", "dark"] : ["light"];
+
+if (!/^https?:\/\//i.test(url)) {
+  console.error(`not a URL: ${url}\nusage: design-shot.mjs <url> [--out dir] [--wait ms] [--dark]`);
+  process.exit(2);
+}
 
 const pw = await loadPlaywright();
 // A globally-resolved copy is CJS, so its exports arrive under `default`.
@@ -56,9 +92,11 @@ const problems = [];
 let browser;
 try {
   browser = await chromium.launch();
-} catch {
+} catch (e) {
   // Preinstalled Chromium, when the bundled browser path is not discoverable.
-  browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
+  const explicit = process.env.CHROMIUM_PATH;
+  if (!explicit) throw e;
+  browser = await chromium.launch({ executablePath: explicit });
 }
 
 const shots = [];

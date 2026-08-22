@@ -17,6 +17,13 @@ Leave this project resumable by someone with no memory of this session.
    only in a working tree exists on one machine; this setup has lost 9.9 MB that
    way once already.
 
+   **But never to trunk.** A session that ran `/kickoff` and `/plan` has no
+   branch — `/plan` deliberately does not create one — so it is sitting on trunk
+   with a new plan doc and a modified `STATE.md`. Pushing "everything" there
+   commits directly to trunk, which the protocol forbids. If you are on trunk
+   with changes, create `claude/<slug>` first and push that. This is the common
+   session shape, not an edge case.
+
 3. Report what is left in flight, in three lines.
 
 Write STATE.md for an agent that has never seen this project. "Continued the
