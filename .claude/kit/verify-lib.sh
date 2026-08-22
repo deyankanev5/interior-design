@@ -30,7 +30,12 @@ have() { command -v "$1" >/dev/null 2>&1; }
 # list silently became empty and every required check degraded to a soft skip —
 # the gate disarming itself exactly where nobody would look.
 _kit_required() {
-  [ -f .claude/kit.json ] || { echo ""; return 0; }
+  if [ ! -f .claude/kit.json ]; then
+    printf '\033[31mVERIFY CANNOT RUN\033[0m - .claude/kit.json is missing, so the\n' >&2
+    printf 'set of required checks is unknown. Treating that as "nothing required"\n' >&2
+    printf 'would silently disarm this gate. Reinstall the kit, or restore the file.\n' >&2
+    return 1
+  fi
   if ! have python3; then
     printf '\033[31mVERIFY CANNOT RUN\033[0m - python3 is needed to read\n' >&2
     printf '.claude/kit.json (requiredChecks). Without it this gate would silently\n' >&2
