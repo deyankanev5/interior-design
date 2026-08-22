@@ -1,5 +1,5 @@
 
-## Working with other agents in this repo (kit v1.0.0)
+## Working with other agents in this repo (kit v1.1.0)
 
 Several agents work this repository at once — Claude sessions in parallel, and
 sometimes Codex. **Read `.claude/kit/protocol.md` before your first edit of a

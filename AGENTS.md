@@ -1,5 +1,5 @@
 
-## Working alongside other agents in this repo (kit v1.0.0)
+## Working alongside other agents in this repo (kit v1.1.0)
 
 This repository is worked by several agents at once — Codex, Claude Code
 sessions, possibly more. They coordinate through one protocol, and it only works
