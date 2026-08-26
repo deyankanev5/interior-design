@@ -302,6 +302,7 @@ button {
 
 .slot {
   position: relative;
+  overflow: hidden;
   flex: 1 1 0;
   min-width: 0;
   display: flex;
@@ -316,7 +317,18 @@ button {
   flex-grow: 0.85;
 }
 
-/* Suggests the surface character without pretending to be a photo of it. */
+/* The manufacturer's own photograph of the decor, where one exists. */
+.decor-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Where the schematic fallback is used instead of a photograph. */
 .slot .grain {
   position: absolute;
   inset: 0;
@@ -327,6 +339,54 @@ button {
   opacity: 0.5;
   mix-blend-mode: soft-light;
   z-index: -1;
+}
+
+.slot-surface {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  display: block;
+}
+
+/* Keeps the hex, decor code and controls legible over a busy woodgrain. */
+.slot-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgb(0 0 0 / 6%) 0%,
+    rgb(0 0 0 / 0%) 22%,
+    rgb(0 0 0 / 0%) 55%,
+    rgb(0 0 0 / 10%) 100%
+  );
+}
+
+.slot[data-fg='#FFFFFF'] .slot-scrim {
+  background: linear-gradient(
+    to bottom,
+    rgb(0 0 0 / 22%) 0%,
+    rgb(0 0 0 / 6%) 24%,
+    rgb(0 0 0 / 8%) 55%,
+    rgb(0 0 0 / 34%) 100%
+  );
+}
+
+.slot-hex,
+.slot-code,
+.slot-name,
+.slot-meta,
+.slot-note {
+  text-shadow: 0 1px 3px rgb(0 0 0 / 22%);
+}
+
+.slot[data-fg='#000000'] .slot-hex,
+.slot[data-fg='#000000'] .slot-code,
+.slot[data-fg='#000000'] .slot-name,
+.slot[data-fg='#000000'] .slot-meta,
+.slot[data-fg='#000000'] .slot-note {
+  text-shadow: 0 1px 3px rgb(255 255 255 / 45%);
 }
 
 .slot-head {
@@ -648,6 +708,10 @@ button {
   height: 100%;
   opacity: 0.55;
   mix-blend-mode: soft-light;
+}
+
+.swatch {
+  display: block;
 }
 
 .mat-info {

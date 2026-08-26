@@ -98,6 +98,30 @@ check('no server-side API calls remain in the bundle', () => {
   return 'none';
 });
 
+check('decor images ship and every reference resolves', () => {
+  // The catalogue names its images by path. A renamed or missing tile shows as
+  // a flat colour at runtime rather than an error, so assert it at build time.
+  const src = join(root, 'src', 'data', 'sources');
+  const refs = new Set();
+  for (const f of readdirSync(src).filter((n) => n.endsWith('.generated.ts'))) {
+    for (const m of readFileSync(join(src, f), 'utf8').matchAll(/image:\s*"([^"]+)"/g)) {
+      refs.add(m[1]);
+    }
+  }
+  if (!refs.size) throw new Error('no decor images referenced — did the scrapers run?');
+
+  const missing = [...refs].filter((r) => !existsSync(join(dist, r)));
+  if (missing.length) {
+    throw new Error(`${missing.length} referenced tile(s) absent from dist, e.g. ${missing[0]}`);
+  }
+
+  const dir = join(dist, 'decors');
+  const count = existsSync(dir)
+    ? readdirSync(dir).reduce((n, sub) => n + readdirSync(join(dir, sub)).length, 0)
+    : 0;
+  return `${refs.size} referenced, ${count} shipped`;
+});
+
 check('total payload is reasonable', () => {
   const walk = (dir) =>
     readdirSync(dir).reduce((sum, name) => {

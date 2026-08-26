@@ -1,6 +1,6 @@
 import type { MaterialView } from '../../domain/types';
 import { CATEGORY_LABEL } from '../../domain/types';
-import { Grain } from '../../ui/Grain';
+import { DecorSurface } from '../../ui/Decor';
 
 const PROVENANCE_TAG: Record<MaterialView['provenance'], { label: string; cls: string; title: string }> = {
   'manufacturer-decor': {
@@ -37,9 +37,7 @@ export function MaterialRow({
 
   return (
     <button className={`mat${selected ? ' selected' : ''}`} onClick={onPick} title={reason}>
-      <span className="swatch" style={{ background: material.hex }}>
-        <Grain pattern={material.pattern} />
-      </span>
+      <DecorSurface className="swatch" material={material} hex={material.hex} />
       <span className="mat-info">
         <b>
           {material.code}

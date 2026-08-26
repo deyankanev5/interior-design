@@ -20,6 +20,11 @@ const browser = await chromium.launch({
 const page = await browser.newPage({ viewport: { width: 1600, height: 900 }, colorScheme: 'dark' });
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
 page.on('pageerror', (e) => errors.push('PAGEERROR: ' + e.message));
+// A decor tile that 404s degrades to a flat colour rather than erroring, so
+// watch the network as well as the console.
+page.on('response', (r) => {
+  if (r.url().includes('/decors/') && !r.ok()) errors.push(`DECOR ${r.status()}: ${r.url()}`);
+});
 
 const readSlots = () =>
   page.$$eval('.slot', (els) =>
@@ -123,6 +128,17 @@ await page.waitForTimeout(500);
 console.log('\nroom svg present:', await page.locator('.panel svg.room').count());
 await page.screenshot({ path: `${SHOT}/shot-room.png` });
 await page.keyboard.press('Escape');
+
+// ---- real supplier decor photographs render ---------------------------------
+console.log('\n=== decor images ===');
+{
+  const imgs = await page.$$eval('.slot .decor-img', (els) =>
+    els.map((e) => ({ src: e.getAttribute('src'), w: e.naturalWidth })),
+  );
+  console.log('slots showing a supplier photograph:', imgs.length);
+  console.log('all decoded:', imgs.length > 0 && imgs.every((i) => i.w > 0));
+  console.log('served from the base path:', imgs.every((i) => i.src?.includes('/decors/')));
+}
 
 // ---- no AI surface remains --------------------------------------------------
 console.log('\n=== AI removed ===');

@@ -6,7 +6,7 @@ import { reportFor } from '../../engine/score';
 import { getMaterial } from '../../data/catalog';
 import { Panel } from '../../ui/Modal';
 import { Icon } from '../../ui/Icon';
-import { Grain } from '../../ui/Grain';
+import { DecorSurface } from '../../ui/Decor';
 import { actions, useAppState } from '../../state/store';
 
 /**
@@ -66,14 +66,9 @@ export function VariationsPanel({ onClose, onToast }: { onClose: () => void; onT
               }}
             >
               <span className="variation-strip">
-                {v.slots.map((s) => {
-                  const m = getMaterial(s.materialId);
-                  return (
-                    <i key={s.id} style={{ background: s.hex }}>
-                      {m && <Grain pattern={m.pattern} opacity={0.5} />}
-                    </i>
-                  );
-                })}
+                {v.slots.map((s) => (
+                  <DecorSurface key={s.id} material={getMaterial(s.materialId)} hex={s.hex} />
+                ))}
               </span>
               <span className="variation-foot">
                 <span>{summarise(v)}</span>
