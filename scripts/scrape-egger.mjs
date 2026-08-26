@@ -31,7 +31,7 @@
  */
 import { writeFileSync, rmSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { processDecors } from './lib/process-decors.mjs';
+import { processDecors, isBackdropShot } from './lib/process-decors.mjs';
 
 /** EGGER's English decor sitemap, reached from robots.txt via sitemap/index.xml. */
 const SITEMAP = 'https://www.egger.com/sitemap/s/pimedp-0.xml';
@@ -158,15 +158,23 @@ const pages = await pool(slugs, CONCURRENCY, async (slug) => {
   const html = await get(DETAIL(slug));
 
   const title = html.match(/<title>([^<]+)<\/title>/)?.[1] ?? '';
+  const code = slug.split('_')[0];
+  const texture = textureOf(slug);
+
   // Titles read `H1386 ST40 Brown Casella Oak | EGGER`, sometimes prefixed
-  // `NEW!`. The code and texture are already known from the slug, so strip them
-  // and keep the name; marketing prefixes belong on a website, not in a finish
+  // `NEW!`. Strip the code and the texture, which the slug already gave us, and
+  // keep the name; marketing prefixes belong on a website, not in a finish
   // schedule.
-  const name = title
-    .split('|')[0]
-    .replace(/^\s*(NEW!?|NEU!?)\s*/i, '')
-    .replace(/^\s*[A-Z0-9]+\s+(?:ST\d+|[A-Z]{2}\d*)\s*/i, '')
-    .trim();
+  //
+  // The prefixes are matched against the known code and texture rather than by
+  // shape. A pattern loose enough to cover `ST40`, `PM`, `R1` and `STG4` — EGGER
+  // writes that one both ways — is also loose enough to eat the first word of a
+  // real name. Driving it from known values cannot.
+  const words = title.split('|')[0].trim().split(/\s+/);
+  if (/^(NEW!?|NEU!?)$/i.test(words[0] ?? '')) words.shift();
+  if (words[0]?.toUpperCase() === code.toUpperCase()) words.shift();
+  if (texture && new RegExp(`^(ST)?${texture.replace(/^ST/, '')}$`, 'i').test(words[0] ?? '')) words.shift();
+  const name = words.join(' ').trim();
 
   // The first PIM asset on the page is the flat decor scan; later ones are
   // room scenes and the thumbnails of recommended pairings.
@@ -178,7 +186,7 @@ const pages = await pool(slugs, CONCURRENCY, async (slug) => {
     ...new Set([...html.matchAll(/\/decors\/([A-Z0-9]+_[0-9A-Za-z]+)/g)].map(([, s]) => s)),
   ].filter((s) => s !== slug);
 
-  return { slug, code: slug.split('_')[0], texture: textureOf(slug), name, asset, related };
+  return { slug, code, texture, name, asset, related };
 });
 
 console.log(`  ${pages.length} decor pages parsed`);
@@ -198,27 +206,31 @@ console.log('Building tiles and sampling colours…');
 rmSync(IMAGE_DIR, { recursive: true, force: true });
 mkdirSync(IMAGE_DIR, { recursive: true });
 
-const processed = await processDecors(
+const { results: processed, rejected } = await processDecors(
   downloaded.map((d) => ({ id: idOf(d.slug), dataUrl: d.dataUrl })),
-  { outDir: IMAGE_DIR, publicPrefix: PUBLIC_PREFIX },
+  {
+    outDir: IMAGE_DIR,
+    publicPrefix: PUBLIC_PREFIX,
+    // A decor scan is square or tall — a board photographed along its length.
+    // Anything markedly landscape is a room scene that got through, and its
+    // mean colour would describe the room rather than the decor.
+    reject: (m) => isBackdropShot(m) || m.w > m.h * 1.3,
+  },
 );
 
+// A decor whose image was rejected is dropped entirely rather than kept with an
+// estimated colour: the whole point of this pipeline is that the colour and the
+// texture come from the same measured pixels.
 const withColour = downloaded
   .map((d) => {
     const r = processed.get(idOf(d.slug));
-    if (!r) return null;
-    // Decor scans are square or tall — a board photographed along its length.
-    // Anything markedly landscape is a room scene that slipped through, and its
-    // mean colour would describe the room, not the decor.
-    if (r.w > r.h * 1.3) return null;
-    return { ...d, hex: r.hex, image: r.image, bytes: r.bytes };
+    return r ? { ...d, hex: r.hex, image: r.image, bytes: r.bytes } : null;
   })
   .filter(Boolean);
 
-const rejected = downloaded.length - withColour.length;
 const totalBytes = withColour.reduce((sum, d) => sum + d.bytes, 0);
 console.log(
-  `  ${withColour.length} tiles written${rejected ? ` (${rejected} rejected)` : ''}, ` +
+  `  ${withColour.length} tiles written${rejected.length ? ` (${rejected.length} rejected: ${rejected.join(', ')})` : ''}, ` +
     `${(totalBytes / 1024 / 1024).toFixed(1)} MB total ` +
     `(${Math.round(totalBytes / withColour.length / 1024)} KB average)`,
 );

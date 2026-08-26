@@ -144,11 +144,13 @@ console.log('Building tiles and sampling colours…');
 rmSync(IMAGE_DIR, { recursive: true, force: true });
 mkdirSync(IMAGE_DIR, { recursive: true });
 
-const processed = await processDecors(
+const { results: processed, rejected } = await processDecors(
   downloaded.map((d) => ({ id: idOf(d.code), dataUrl: d.dataUrl })),
   { outDir: IMAGE_DIR, publicPrefix: PUBLIC_PREFIX },
 );
 
+// A floor whose image was rejected is dropped rather than kept with an
+// estimated colour: the colour and the texture must come from the same pixels.
 const withColour = downloaded
   .map((d) => {
     const r = processed.get(idOf(d.code));
@@ -158,7 +160,8 @@ const withColour = downloaded
 
 const totalBytes = withColour.reduce((sum, d) => sum + d.bytes, 0);
 console.log(
-  `  ${withColour.length} tiles written, ${(totalBytes / 1024 / 1024).toFixed(1)} MB total ` +
+  `  ${withColour.length} tiles written${rejected.length ? ` (${rejected.length} rejected: ${rejected.join(', ')})` : ''}, ` +
+    `${(totalBytes / 1024 / 1024).toFixed(1)} MB total ` +
     `(${Math.round(totalBytes / withColour.length / 1024)} KB average)`,
 );
 

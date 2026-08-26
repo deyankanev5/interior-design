@@ -23,17 +23,48 @@ export const TILE = 320;
 export const QUALITY = 0.72;
 
 /**
- * @param {{id: string, dataUrl: string}[]} items
- * @param {{outDir: string, publicPrefix: string, batch?: number}} options
- * @returns {Promise<Map<string, {hex: string, image: string, bytes: number, w: number, h: number}>>}
+ * Is this a product photographed on a studio backdrop rather than a surface?
+ *
+ * Some supplier pages lead with a shot of the product on seamless white — an
+ * edge band lying on a sweep, say. Those must never become a decor tile, and
+ * the reason is not that they look wrong. The mean of such an image is the
+ * backdrop: EGGER's `U8921 R1 Doppia Black Matt/Gloss` sampled as `#E7E7E7`,
+ * a near-white, which would let the engine drop a black edging onto a wall as
+ * if it were a pale neutral. Both the texture and the colour are wrong.
+ *
+ * The signature is a frame of pixels with *no* variation at all — a synthetic
+ * backdrop, not a photographed one — around an interior that differs sharply
+ * from it. Measured across the whole catalogue the two populations do not
+ * overlap: backdrop shots sit at a border deviation of 0.0000 with 5–8% of the
+ * image far from the border colour, while the flattest genuine decor manages
+ * 0.0209 with 0.1%. The thresholds sit in the gap, nearer the real decors.
+ *
+ * A plain white board is deliberately kept: its border is uniform too, but
+ * nothing in the interior contrasts with it, because the whole tile is decor.
  */
-export async function processDecors(items, { outDir, publicPrefix, batch = 30 }) {
+export const isBackdropShot = ({ borderSd, far }) => borderSd < 0.012 && far > 0.02;
+
+/**
+ * @param {{id: string, dataUrl: string}[]} items
+ * @param {object} options
+ * @param {string} options.outDir
+ * @param {string} options.publicPrefix
+ * @param {number} [options.batch]
+ * @param {(m: {w: number, h: number, borderSd: number, far: number}) => boolean} [options.reject]
+ *   Called with the source measurements before anything is written. Return true
+ *   to drop the image: nothing lands on disk and the id is absent from the
+ *   result, so a caller that keys off it drops the decor too. Defaults to
+ *   `isBackdropShot`; a caller that adds its own test should still apply that.
+ * @returns {Promise<{results: Map<string, {hex: string, image: string, bytes: number}>, rejected: string[]}>}
+ */
+export async function processDecors(items, { outDir, publicPrefix, batch = 30, reject = isBackdropShot }) {
   const browser = await chromium.launch({
     args: ['--no-sandbox'],
     ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}),
   });
   const page = await browser.newPage();
   const results = new Map();
+  const rejected = [];
 
   try {
     for (let i = 0; i < items.length; i += batch) {
@@ -42,14 +73,18 @@ export async function processDecors(items, { outDir, publicPrefix, batch = 30 })
 
       for (const r of processed) {
         if (!r.hex || !r.jpeg) continue;
+        // Rejection happens before the write, so a bad source leaves no orphan
+        // tile behind for the payload check to trip over.
+        if (reject({ w: r.w, h: r.h, borderSd: r.borderSd, far: r.far })) {
+          rejected.push(r.id);
+          continue;
+        }
         const rel = `${publicPrefix}/${r.id}.jpg`;
         const file = join(outDir, `${r.id}.jpg`);
         const bytes = Buffer.from(r.jpeg, 'base64');
         mkdirSync(dirname(file), { recursive: true });
         writeFileSync(file, bytes);
-        // The source dimensions travel with the result: a caller that scrapes
-        // whole pages needs them to tell a flat decor scan from a room photo.
-        results.set(r.id, { hex: r.hex, image: rel, bytes: bytes.length, w: r.w, h: r.h });
+        results.set(r.id, { hex: r.hex, image: rel, bytes: bytes.length });
       }
       process.stdout.write(`\r  ${Math.min(i + batch, items.length)}/${items.length}`);
     }
@@ -58,7 +93,7 @@ export async function processDecors(items, { outDir, publicPrefix, batch = 30 })
   }
 
   process.stdout.write('\n');
-  return results;
+  return { results, rejected };
 }
 
 /**
@@ -142,10 +177,34 @@ function inBrowser({ items, tile, quality }) {
         }
         if (!n) throw new Error('no pixels');
 
+        // How flat is the outer frame, and how much of the interior departs
+        // from it? Together these separate a product on a studio backdrop from
+        // a genuine surface — see `isBackdropShot`.
+        const px = (p) => [data[p * 4] / 255, data[p * 4 + 1] / 255, data[p * 4 + 2] / 255];
+        const edge = Math.max(3, Math.round(tile / 21));
+        const frame = [];
+        for (let y = 0; y < tile; y++) {
+          for (let x = 0; x < tile; x++) {
+            if (y < edge || y >= tile - edge || x < edge || x >= tile - edge) frame.push(px(y * tile + x));
+          }
+        }
+        const bm = [0, 1, 2].map((k) => frame.reduce((s, v) => s + v[k], 0) / frame.length);
+        const borderSd = Math.sqrt(
+          frame.reduce((s, v) => s + (v[0] - bm[0]) ** 2 + (v[1] - bm[1]) ** 2 + (v[2] - bm[2]) ** 2, 0) /
+            frame.length,
+        );
+        let far = 0;
+        for (let p = 0; p < tile * tile; p++) {
+          const v = px(p);
+          if (Math.hypot(v[0] - bm[0], v[1] - bm[1], v[2] - bm[2]) > 0.18) far++;
+        }
+
         return {
           id,
           w: iw,
           h: ih,
+          borderSd,
+          far: far / (tile * tile),
           hex: hexOf(toRgb([L / n, A / n, B / n])),
           jpeg: tileCanvas.toDataURL('image/jpeg', quality).split(',')[1],
         };

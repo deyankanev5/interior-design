@@ -1088,7 +1088,7 @@ const ROWS: Row[] = [
     hex: "#E6D6C6",
     image: "decors/egger-flooring/egger-fl-el2150.jpg",
     pattern: "woodgrain",
-    collection: "EGGER Flooring — NatureSense 8/33 Classic",
+    collection: "EGGER Flooring — NatureSense 8/32 Classic",
     species: "oak",
     tags: ["flooring","laminate","woodgrain","oak","plank","light"],
   },

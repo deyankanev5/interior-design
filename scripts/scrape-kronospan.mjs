@@ -38,10 +38,32 @@ const CONCURRENCY = 6;
 const UA =
   'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 
-async function get(url, as = 'text') {
-  const res = await fetch(url, { headers: { 'user-agent': UA }, signal: AbortSignal.timeout(45_000) });
-  if (!res.ok) throw new Error(`${res.status} ${url}`);
-  return as === 'buffer' ? Buffer.from(await res.arrayBuffer()) : res.text();
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Fetch with retries.
+ *
+ * This matters more here than in a flat scrape. The crawl reaches decors only
+ * through links on other decors' pages, so one page lost to a transient 503
+ * takes with it every decor reachable only through it — and the run ends with a
+ * quietly smaller catalogue and no error. A run that found 215 decors and a run
+ * that found 211 look equally successful.
+ */
+async function get(url, as = 'text', attempts = 4) {
+  let last;
+  for (let i = 0; i < attempts; i++) {
+    if (i) await sleep(500 * 2 ** i);
+    try {
+      const res = await fetch(url, { headers: { 'user-agent': UA }, signal: AbortSignal.timeout(45_000) });
+      if (res.status === 404) throw Object.assign(new Error(`404 ${url}`), { fatal: true });
+      if (!res.ok) throw new Error(`${res.status} ${url}`);
+      return as === 'buffer' ? Buffer.from(await res.arrayBuffer()) : res.text();
+    } catch (err) {
+      if (err.fatal) throw err;
+      last = err;
+    }
+  }
+  throw last;
 }
 
 const detailUrl = (collection, code) => `${BASE}/decors/view/${collection}/${code}/`;
@@ -127,11 +149,13 @@ const idOfDecor = (d) =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')}`;
 
-const processed = await processDecors(
+const { results: processed, rejected } = await processDecors(
   downloaded.map((d) => ({ id: idOfDecor(d), dataUrl: d.dataUrl })),
   { outDir: IMAGE_DIR, publicPrefix: PUBLIC_PREFIX },
 );
 
+// A decor whose image was rejected is dropped rather than kept with an
+// estimated colour: the colour and the texture must come from the same pixels.
 const withColour = downloaded
   .map((d) => {
     const r = processed.get(idOfDecor(d));
@@ -141,7 +165,8 @@ const withColour = downloaded
 
 const totalBytes = withColour.reduce((sum, d) => sum + d.bytes, 0);
 console.log(
-  `  ${withColour.length} tiles written, ${(totalBytes / 1024 / 1024).toFixed(1)} MB total ` +
+  `  ${withColour.length} tiles written${rejected.length ? ` (${rejected.length} rejected: ${rejected.join(', ')})` : ''}, ` +
+    `${(totalBytes / 1024 / 1024).toFixed(1)} MB total ` +
     `(${Math.round(totalBytes / withColour.length / 1024)} KB average)`,
 );
 

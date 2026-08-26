@@ -68,11 +68,11 @@ nobody on site can buy `#CFC0B3`), PNG, SVG, JSON, or CSS custom properties.
 
 ## The catalogue
 
-892 entries, in three confidence tiers that are labelled on every row in the UI:
+875 entries, in three confidence tiers that are labelled on every row in the UI:
 
 | Tier | What it is | Count |
 | --- | --- | --- |
-| **orderable** | Decor codes, names and textures scraped from the manufacturer's own published range. Quote directly to a supplier. | 770 |
+| **orderable** | Decor codes, names and textures scraped from the manufacturer's own published range. Quote directly to a supplier. | 753 |
 | **standard** | RAL Classic. A published standard, so any paint, lacquer or powder-coat supplier in the EU can match it — and it still means the same thing in five years. | 75 |
 | **representative** | A finish *family* rather than a specific SKU: honed travertine, bouclé wool, brushed brass. Tile and textile ranges turn over too fast, and vary too much by importer, for a fixed SKU list to stay honest. | 47 |
 
@@ -95,7 +95,7 @@ two things:
   `public/decors/` and shown as the actual surface in the app.
 
 Both come from the same pixels, so the colour the engine reasons about and the texture you see
-cannot drift apart. 770 tiles, 5.2 MB in total, lazy-loaded — a first visit fetches only the
+cannot drift apart. 753 tiles, 5.1 MB in total, lazy-loaded — a first visit fetches only the
 handful on screen.
 
 Showing the real decor matters because a woodgrain's knots and a stone's veining carry
@@ -104,8 +104,20 @@ judgement about pattern and scale. RAL colours and representative finishes have 
 authoritative image, so they render as flat colour with a deliberately schematic grain —
 inventing a texture for them would misrepresent the product.
 
+**Not every published image is a surface.** Supplier pages mix flat decor scans with room
+scenes and studio product shots, and the wrong one poisons the colour as well as the texture:
+sampled from its product photo, EGGER's `U8921 R1 Doppia Black Matt/Gloss` — a black edging on
+a white sweep — comes out as `#E7E7E7`, and the engine would happily drop it onto a wall as a
+pale neutral. So the pipeline rejects two shapes before writing anything: a markedly landscape
+image, which is a room scene rather than a board photographed along its length; and a *perfectly*
+uniform border around a contrasting interior, which is a product on a synthetic backdrop. The
+two populations are far apart — backdrop shots measure a border deviation of 0.0000 against
+0.0209 for the flattest genuine decor — so the thresholds are not a judgement call. A rejected
+decor is dropped from the catalogue rather than kept with a guessed colour. Flooring pages
+additionally lead with a room scene, so that scraper takes EGGER's "Detailed view" instead.
+
 ```bash
-node scripts/scrape-egger.mjs           # 365 board decors + EGGER's published pairings
+node scripts/scrape-egger.mjs           # 348 board decors + EGGER's published pairings
 node scripts/scrape-egger-flooring.mjs  # 190 flooring decors
 node scripts/scrape-kronospan.mjs       # 215 decors
 ```
