@@ -68,34 +68,57 @@ nobody on site can buy `#CFC0B3`), PNG, SVG, JSON, or CSS custom properties.
 
 ## The catalogue
 
-563 entries, in three confidence tiers that are labelled on every row in the UI:
+892 entries, in three confidence tiers that are labelled on every row in the UI:
 
 | Tier | What it is | Count |
 | --- | --- | --- |
-| **orderable** | Decor codes, names and textures scraped from the manufacturer's own published range. Quote directly to a supplier. | 441 |
+| **orderable** | Decor codes, names and textures scraped from the manufacturer's own published range. Quote directly to a supplier. | 770 |
 | **standard** | RAL Classic. A published standard, so any paint, lacquer or powder-coat supplier in the EU can match it — and it still means the same thing in five years. | 75 |
 | **representative** | A finish *family* rather than a specific SKU: honed travertine, bouclé wool, brushed brass. Tile and textile ranges turn over too fast, and vary too much by importer, for a fixed SKU list to stay honest. | 47 |
 
-The orderable tier covers **EGGER** (the default reference range for furniture and fitted
-joinery across the EU) and **Kronospan** (which manufactures in Veliko Tarnovo and Burgas, so
-its decors carry the shortest lead time on the Bulgarian market and are usually the
-cost-effective alternative to an equivalent EGGER decor).
+The orderable tier covers **EGGER** boards (the default reference range for furniture and
+fitted joinery across the EU), **EGGER laminate flooring**, and **Kronospan** (which
+manufactures in Veliko Tarnovo and Burgas, so its decors carry the shortest lead time on the
+Bulgarian market and are usually the cost-effective alternative to an equivalent EGGER decor).
 
-### Where the colours come from
+### Where the colours and textures come from
 
-Not typed in by hand. `scripts/scrape-egger.mjs` and `scripts/scrape-kronospan.mjs` pull each
-manufacturer's published decor list and download the manufacturer's own photograph of every
-decor, then compute the **mean colour in Oklab**. Averaging perceptually rather than in raw
-sRGB matters: the sRGB mean of a woodgrain skews dark and desaturated because the encoding is
-non-linear, which is exactly the error that makes a generated palette feel muddy.
+Not typed in by hand. The three scrapers pull each manufacturer's published decor list and
+download the manufacturer's own photograph of every decor. From that one decode they produce
+two things:
+
+- the **representative colour**, as the mean of the photograph in Oklab. Averaging perceptually
+  rather than in raw sRGB matters: the sRGB mean of a woodgrain skews dark and desaturated
+  because the encoding is non-linear, which is exactly the error that makes a generated palette
+  feel muddy.
+- a **square 320 px tile** of the decor itself, re-encoded to about 7 KB, shipped in
+  `public/decors/` and shown as the actual surface in the app.
+
+Both come from the same pixels, so the colour the engine reasons about and the texture you see
+cannot drift apart. 770 tiles, 5.2 MB in total, lazy-loaded — a first visit fetches only the
+handful on screen.
+
+Showing the real decor matters because a woodgrain's knots and a stone's veining carry
+information no flat colour can, and judging whether two surfaces sit together is largely a
+judgement about pattern and scale. RAL colours and representative finishes have no single
+authoritative image, so they render as flat colour with a deliberately schematic grain —
+inventing a texture for them would misrepresent the product.
 
 ```bash
-node scripts/scrape-egger.mjs        # 218 decors + EGGER's published pairings
-node scripts/scrape-kronospan.mjs    # 214 decors
+node scripts/scrape-egger.mjs           # 365 board decors + EGGER's published pairings
+node scripts/scrape-egger-flooring.mjs  # 190 flooring decors
+node scripts/scrape-kronospan.mjs       # 215 decors
 ```
 
-Both write `src/data/sources/*.generated.ts`. Neither needs a key. Behind an HTTP proxy, run
-them with `NODE_USE_ENV_PROXY=1`.
+They write `src/data/sources/*.generated.ts`. None needs a key. Behind an HTTP proxy, run them
+with `NODE_USE_ENV_PROXY=1`.
+
+The EGGER scrapers read the **sitemap**, not the interactive Design Wall, and request pages with
+`?country=GB`. Both details are load-bearing. The Design Wall shows a curated subset — around
+218 decors, silently missing whole surface-texture families including ST40 Casella Oak, ST7,
+ST20 and the PerfectSense range — and the English site defaults to the US catalogue, which
+stocks barely a quarter of what the sitemap lists and returns a bare 404 for the rest. `GB`
+serves EGGER's European range in English, which is what a Bulgarian or EU buyer can order.
 
 The EGGER scraper additionally collects the decor combinations **EGGER itself publishes** on
 each decor page. A manufacturer's own pairing advice beats anything the colour maths can infer,
@@ -226,7 +249,8 @@ src/
   color/convert.ts        sRGB ↔ Oklab/OkLCh, ΔE, LRV, WCAG contrast, gamut-safe adjustment
   domain/                 types + per-surface design envelopes
   data/
-    sources/              EGGER + Kronospan (generated), RAL Classic, representative finishes
+    sources/              EGGER boards + flooring, Kronospan (generated), RAL Classic,
+                          representative finishes
     catalog.ts            index, tolerant search, nearest-match
     import.ts             CSV/JSON catalogue loader
   engine/
