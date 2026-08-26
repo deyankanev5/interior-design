@@ -6,7 +6,7 @@ import { displayName, getMaterial, searchMaterials } from '../../data/catalog';
 import { suggestForSlot } from '../../engine/generate';
 import { Panel } from '../../ui/Modal';
 import { Icon } from '../../ui/Icon';
-import { Grain } from '../../ui/Grain';
+import { DecorSurface } from '../../ui/Decor';
 import { actions, useStore } from '../../state/store';
 import { MaterialRow } from '../library/MaterialRow';
 
@@ -50,13 +50,12 @@ export function SlotPanel({ slotId, onClose }: { slotId: string; onClose: () => 
     <Panel title={`${SURFACE_LABEL[slot.surface]} · slot ${palette.slots.indexOf(slot) + 1}`} onClose={onClose}>
       <div className="section">
         <div className="row">
-          <div
+          <DecorSurface
             className="swatch"
-            style={{ background: slot.hex, width: 56, height: 56 }}
-            aria-hidden="true"
-          >
-            {material && <Grain pattern={material.pattern} />}
-          </div>
+            material={material}
+            hex={slot.hex}
+            style={{ width: 56, height: 56 }}
+          />
           <div className="mat-info">
             <b>{material ? displayName(material) : 'Free colour'}</b>
             <span>{material ? `${material.brand} · ${material.collection ?? ''}` : slot.hex}</span>

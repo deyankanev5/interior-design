@@ -95,6 +95,12 @@ export interface Material {
   name: string;
   /** Approximate on-screen colour. Never a substitute for a physical sample. */
   hex: string;
+  /**
+   * Path to the manufacturer's own photograph of the decor, relative to the
+   * site base. Present for scraped ranges; absent for colour standards and
+   * representative finishes, which have no single authoritative image.
+   */
+  image?: string;
   category: MaterialCategory;
   pattern: Pattern;
   sheen: Sheen;

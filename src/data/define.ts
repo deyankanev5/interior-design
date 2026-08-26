@@ -9,6 +9,7 @@ export interface Row {
   texture?: string;
   name: string;
   hex: string;
+  image?: string;
   pattern?: Pattern;
   sheen?: Sheen;
   species?: string;
@@ -44,6 +45,7 @@ export function define(defaults: Defaults, rows: Row[]): Material[] {
       texture: r.texture,
       name: r.name,
       hex: r.hex.toUpperCase(),
+      image: r.image,
       category: defaults.category,
       pattern: r.pattern ?? defaults.pattern ?? 'solid',
       sheen: r.sheen ?? defaults.sheen ?? 'matt',

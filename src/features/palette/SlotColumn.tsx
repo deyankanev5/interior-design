@@ -1,7 +1,7 @@
 import { SURFACES, SURFACE_LABEL, type Slot, type Surface } from '../../domain/types';
 import { lrv, readableTextOn } from '../../color/convert';
 import { displayName, getMaterial } from '../../data/catalog';
-import { Grain } from '../../ui/Grain';
+import { DecorSurface } from '../../ui/Decor';
 import { Icon } from '../../ui/Icon';
 import { actions } from '../../state/store';
 
@@ -27,8 +27,10 @@ export function SlotColumn({
       className={`slot${slot.locked ? ' locked' : ''}`}
       style={{ background: slot.hex, color: fg }}
       data-surface={slot.surface}
+      data-fg={fg}
     >
-      {material && <Grain pattern={material.pattern} />}
+      <DecorSurface className="slot-surface" material={material} hex={slot.hex} />
+      <span className="slot-scrim" />
 
       <div className="slot-head">
         <span className="surface-pill">

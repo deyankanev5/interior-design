@@ -15,11 +15,14 @@
  * of Kronospan's decor photograph in Oklab — representative for palette maths,
  * never a substitute for a physical sample.
  */
-import { writeFileSync } from 'node:fs';
-import { chromium } from 'playwright';
+import { writeFileSync, rmSync, mkdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { processDecors } from './lib/process-decors.mjs';
 
 const BASE = 'https://kronospan.com/en_EN';
 const OUT = new URL('../src/data/sources/kronospan.generated.ts', import.meta.url);
+const IMAGE_DIR = fileURLToPath(new URL('../public/decors/kronospan', import.meta.url));
+const PUBLIC_PREFIX = 'decors/kronospan';
 
 /** Well-known decors to crawl outward from. */
 const SEEDS = [
@@ -114,98 +117,33 @@ await Promise.all(
 );
 console.log(`  ${downloaded.length} images downloaded`);
 
-console.log('Sampling colours…');
-const browser = await chromium.launch({
-  args: ['--no-sandbox'],
-  ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}),
-});
-const page = await browser.newPage();
+console.log('Building tiles and sampling colours…');
+// Rebuilt from scratch each run so withdrawn decors do not linger as orphans.
+rmSync(IMAGE_DIR, { recursive: true, force: true });
+mkdirSync(IMAGE_DIR, { recursive: true });
 
-const sampled = [];
-for (let i = 0; i < downloaded.length; i += 40) {
-  sampled.push(...(await page.evaluate(meanColours, downloaded.slice(i, i + 40))));
-  process.stdout.write(`\r  ${Math.min(i + 40, downloaded.length)}/${downloaded.length}`);
-}
-await browser.close();
+const idOfDecor = (d) =>
+  `${d.collection === 'kronoflooring' ? 'kronospan-fl' : 'kronospan'}-${d.code
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')}`;
 
-const withColour = sampled.filter((d) => d.hex);
-console.log(`\n  ${withColour.length} sampled`);
+const processed = await processDecors(
+  downloaded.map((d) => ({ id: idOfDecor(d), dataUrl: d.dataUrl })),
+  { outDir: IMAGE_DIR, publicPrefix: PUBLIC_PREFIX },
+);
 
-/** Mean colour in Oklab — see scripts/scrape-egger.mjs for why not sRGB. */
-function meanColours(items) {
-  const srgbToLinear = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
-  const linearToSrgb = (c) => (c <= 0.0031308 ? c * 12.92 : 1.055 * c ** (1 / 2.4) - 0.055);
+const withColour = downloaded
+  .map((d) => {
+    const r = processed.get(idOfDecor(d));
+    return r ? { ...d, hex: r.hex, image: r.image, bytes: r.bytes } : null;
+  })
+  .filter(Boolean);
 
-  const toOklab = (r, g, b) => {
-    const lr = srgbToLinear(r);
-    const lg = srgbToLinear(g);
-    const lb = srgbToLinear(b);
-    const l = Math.cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb);
-    const m = Math.cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb);
-    const s = Math.cbrt(0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb);
-    return [
-      0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
-      1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
-      0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
-    ];
-  };
-
-  const toRgb = ([L, A, B]) => {
-    const l = (L + 0.3963377774 * A + 0.2158037573 * B) ** 3;
-    const m = (L - 0.1055613458 * A - 0.0638541728 * B) ** 3;
-    const s = (L - 0.0894841775 * A - 1.291485548 * B) ** 3;
-    return [
-      linearToSrgb(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
-      linearToSrgb(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
-      linearToSrgb(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s),
-    ];
-  };
-
-  const hex = (rgb) =>
-    '#' +
-    rgb
-      .map((v) => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, '0'))
-      .join('')
-      .toUpperCase();
-
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-  return Promise.all(
-    items.map(async ({ dataUrl, ...rest }) => {
-      try {
-        const img = new Image();
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = () => reject(new Error('decode failed'));
-          img.src = dataUrl;
-        });
-
-        const w = (canvas.width = Math.min(140, img.naturalWidth || 140));
-        const h = (canvas.height = Math.min(140, img.naturalHeight || 140));
-        ctx.drawImage(img, 0, 0, w, h);
-        const { data } = ctx.getImageData(0, 0, w, h);
-
-        let L = 0;
-        let A = 0;
-        let B = 0;
-        let n = 0;
-        for (let i = 0; i < data.length; i += 4) {
-          if (data[i + 3] < 128) continue;
-          const lab = toOklab(data[i] / 255, data[i + 1] / 255, data[i + 2] / 255);
-          L += lab[0];
-          A += lab[1];
-          B += lab[2];
-          n++;
-        }
-        if (!n) throw new Error('no pixels');
-        return { ...rest, hex: hex(toRgb([L / n, A / n, B / n])) };
-      } catch {
-        return { ...rest, hex: null };
-      }
-    }),
-  );
-}
+const totalBytes = withColour.reduce((sum, d) => sum + d.bytes, 0);
+console.log(
+  `  ${withColour.length} tiles written, ${(totalBytes / 1024 / 1024).toFixed(1)} MB total ` +
+    `(${Math.round(totalBytes / withColour.length / 1024)} KB average)`,
+);
 
 /* ------------------------------------------------------------ classifying -- */
 
@@ -257,6 +195,7 @@ function rowsFor(collection) {
     code: ${JSON.stringify(d.code)},
     name: ${JSON.stringify(d.name)},
     hex: ${JSON.stringify(d.hex)},
+    image: ${JSON.stringify(d.image)},
     pattern: ${JSON.stringify(pattern)},
     sheen: ${JSON.stringify(sheen)},${species ? `\n    species: ${JSON.stringify(species)},` : ''}
     tags: ${JSON.stringify(tagsFor(d.name, pattern, d.hex, collection))},
