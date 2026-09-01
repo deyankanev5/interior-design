@@ -10,10 +10,12 @@ This command writes files, so it is a track like any other: claim scope and work
 on a branch (`/build`), never straight on trunk. Running it beside an open track
 that owns the same paths is the collision the protocol exists to prevent.
 
-Public-facing copy is an always-escalate category (`.claude/kit/protocol.md` §7).
-This draft does **not** merge on the strength of the writer agent alone — it goes
-through the same review gate as code, and the human sees it before it is
-published.
+Public-facing copy goes through the same review gate as code, and since
+2026-09-01 it **merges with a notice** rather than waiting (`.claude/kit/protocol.md`
+§7): the reviewer checks it against the tone-of-voice standard, it lands on
+trunk, and the owner is told what was written and where. *Deploying* it to a
+live site remains a production act on the floor — copy on trunk is revisable;
+copy in front of customers is not.
 
 Draft the piece specified by: **$ARGUMENTS**
 

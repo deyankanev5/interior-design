@@ -168,22 +168,34 @@ Trunk is named in `.claude/kit.json`, because it is not `main` everywhere.
 
 ## 7. What auto-merges, and what does not
 
-The human approves the **plan**. Everything downstream runs unattended, *if* it
-clears every gate: local verify, CI green, and a reviewer agent that had no part
-in writing the code.
+Since 2026-09-01 the model is **act, then report** (`autonomy.md` records the
+owner's instruction and the reasoning). Plans post and start; work runs
+unattended *if* it clears every gate: local verify, CI green, and a reviewer
+agent that had no part in writing the code.
 
-The reviewer **must escalate rather than merge** when the diff contains any of:
+The reviewer **must escalate rather than merge** — these wait for the owner,
+however long that takes:
 
-- a database migration, or any schema change
-- a change to secrets, credentials, tokens, or permission configuration
-- anything touching a production host or a deploy path
-- a deletion it cannot justify from the plan
-- public-facing copy, where the project has a tone-of-voice standard
-- a dependency added or a version pinned
-- a change outside the track's declared `owns`
+- anything touching a **live production host or its data** — in `alni`
+  absolute: `alni.eu` is read-only, and the Hetzner box runs four live sites
+  off one shared MySQL container
+- a change to **secrets, credentials, tokens, or permission configuration**
+- an **irreversible deletion** — of data that exists nowhere else, or one the
+  reviewer cannot justify from the plan
+- anything that **spends money**
 - **a change to the gate itself** — `scripts/verify.sh`, CI configuration,
   `.claude/**`, or this protocol
 - its own honest uncertainty about whether the change is correct
+
+The reviewer **merges with a notice** — a plain statement of what was done and
+why, delivered to the owner rather than waited on — for the categories the
+2026-09-01 policy moved off the floor:
+
+- a schema change or migration on **non-production** data
+- a dependency added or a version pinned, with why it earned its place
+- public-facing copy under a tone-of-voice standard (deploying it to a live
+  site is a production act — floor)
+- a change outside the track's declared `owns`, naming what widened and why
 
 That gate-itself category is the one a green build cannot protect you from.
 A track narrows a lint glob, adds `--passWithNoTests`, or drops a `step` line:

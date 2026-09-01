@@ -13,6 +13,11 @@ Gather, in parallel where possible:
 - open PRs, with their `kit:scope` blocks parsed
 - any plan docs in `docs/plans/` with **Status: proposed** or **in progress**
 
+Work assigned by **Dispatch** (the owner's always-on coordinator session)
+arrives through exactly these channels — a task under **Next** in STATE.md, a
+plan doc, or an open claim PR. There is no separate queue to check: if it is
+not in the repo, it was not assigned.
+
 Then report, in under 20 lines:
 
 1. **Where the project is** — one paragraph from STATE.md, not a file listing.
