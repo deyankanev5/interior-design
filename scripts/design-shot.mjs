@@ -1,155 +1,102 @@
-#!/usr/bin/env node
 /**
- * Render a page and look at it.
+ * Screenshot the app at a set of viewports and panel states.
  *
- *   node scripts/design-shot.mjs <url> [--out dir] [--dark] [--wait ms]
+ *   node scripts/design-shot.mjs [outDir]
  *
- * Captures the page at five widths — including the awkward middle sizes that
- * break more often than the named breakpoints — plus light and dark, and
- * reports console errors and failed requests.
- *
- * Reading the resulting PNGs is the point. Code that reads well still produces
- * layouts that collide and rhythm that is invisible in the source.
+ * Design work needs to be judged from what the browser actually paints, not
+ * from the markup. This drives the built app and writes one PNG per
+ * (viewport × view) so a change can be compared side by side.
  */
-import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
-import { createRequire } from "node:module";
-import { delimiter } from "node:path";
-import { execSync } from "node:child_process";
+import { mkdirSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { chromium } from 'playwright';
+
+const OUT = process.argv[2] ?? './design-shots';
+const BASE = process.env.SHOT_URL ?? 'http://localhost:4173/interior-design';
 
 const VIEWPORTS = [
-  { name: "mobile",  width: 390,  height: 844  },
-  { name: "phablet", width: 540,  height: 900  }, // where single-column layouts give up
-  { name: "tablet",  width: 834,  height: 1112 },
-  { name: "laptop",  width: 1280, height: 800  },
-  { name: "wide",    width: 1728, height: 1080 },
+  { name: 'desktop', width: 1600, height: 900, mobile: false },
+  { name: 'laptop', width: 1180, height: 800, mobile: false },
+  { name: 'mobile', width: 390, height: 844, mobile: true },
 ];
 
-// Global install locations are discovered, not hardcoded: an earlier version
-// baked this sandbox's /opt/node22 path into repos driven from Windows Git Bash.
-function globalRoots() {
-  const roots = [];
-  if (process.env.NODE_PATH) roots.push(...process.env.NODE_PATH.split(delimiter));
-  try {
-    roots.push(execSync("npm root -g", { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim());
-  } catch {}
-  return roots.filter(Boolean);
-}
+/** Each view is a name plus what to click to get there. */
+const VIEWS = [
+  { name: 'palette', open: null },
+  { name: 'slot', open: 'slot' },
+  { name: 'colour', open: 'slot', then: 'Colour' },
+  { name: 'browse', open: 'slot', then: 'Browse' },
+  { name: 'library', open: 'Library' },
+  { name: 'variations', open: 'Variations' },
+  { name: 'analysis', open: 'Analysis' },
+  { name: 'room', open: 'Room' },
+  { name: 'export', open: 'Export' },
+  { name: 'import', open: 'Import' },
+  { name: 'rooms', open: 'Rooms' },
+];
 
-async function loadPlaywright() {
-  try { return await import("playwright"); } catch {}
-  for (const base of globalRoots()) {
-    try {
-      const require = createRequire(join(base, "noop.js"));
-      return await import(require.resolve("playwright"));
-    } catch {}
-  }
-  throw new Error(
-    "playwright not found. Install it locally (`npm i -D playwright`) or globally " +
-    "(`npm i -g playwright`).\nIf Chromium is already provided by the environment, " +
-    "set PLAYWRIGHT_BROWSERS_PATH, or CHROMIUM_PATH to the binary."
-  );
-}
+rmSync(OUT, { recursive: true, force: true });
+mkdirSync(OUT, { recursive: true });
 
-// Flag VALUES must not be eligible to become the URL: `--wait 800 <url>` used to
-// navigate to "800" and then blame the page for ten failed screenshots.
-const argv = process.argv.slice(2);
-const opts = { out: "design-shots", wait: "400", dark: false };
-const positional = [];
-for (let i = 0; i < argv.length; i++) {
-  const a = argv[i];
-  if (a === "--dark") { opts.dark = true; }
-  else if (a === "--out" || a === "--wait") {
-    const v = argv[++i];
-    if (v === undefined || v.startsWith("--")) {
-      console.error(`${a} requires a value`); process.exit(2);
-    }
-    opts[a.slice(2)] = v;
-  }
-  else if (a.startsWith("--")) { console.error(`unknown flag: ${a}`); process.exit(2); }
-  else positional.push(a);
-}
-if (positional.length > 1) { console.error(`expected one URL, got: ${positional.join(", ")}`); process.exit(2); }
+const browser = await chromium.launch({
+  args: ['--no-sandbox'],
+  ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}),
+});
 
-const url = positional[0] || "http://localhost:3000";
-const outDir = opts.out;
-const settle = Number.isFinite(Number(opts.wait)) ? Number(opts.wait) : 400;
-const schemes = opts.dark ? ["light", "dark"] : ["light"];
+for (const vp of VIEWPORTS) {
+  for (const scheme of ['dark', 'light']) {
+    // Light mode is only worth a full sweep on one viewport; the tokens are
+    // shared, so a second pass would show the same thing at another width.
+    const views = scheme === 'light' ? VIEWS.slice(0, 3) : VIEWS;
 
-if (!/^https?:\/\//i.test(url)) {
-  console.error(`not a URL: ${url}\nusage: design-shot.mjs <url> [--out dir] [--wait ms] [--dark]`);
-  process.exit(2);
-}
-
-const pw = await loadPlaywright();
-// A globally-resolved copy is CJS, so its exports arrive under `default`.
-const chromium = pw.chromium ?? pw.default?.chromium;
-if (!chromium) throw new Error("playwright loaded but exposes no chromium export");
-
-mkdirSync(outDir, { recursive: true });
-
-const problems = [];
-let browser;
-try {
-  browser = await chromium.launch();
-} catch (e) {
-  // Preinstalled Chromium, when the bundled browser path is not discoverable.
-  const explicit = process.env.CHROMIUM_PATH;
-  if (!explicit) throw e;
-  browser = await chromium.launch({ executablePath: explicit });
-}
-
-const shots = [];
-for (const scheme of schemes) {
-  for (const vp of VIEWPORTS) {
-    const ctx = await browser.newContext({
+    const page = await browser.newPage({
       viewport: { width: vp.width, height: vp.height },
-      colorScheme: scheme,
       deviceScaleFactor: 2,
+      // `isMobile` is deliberately not set. It gives Chromium a layout viewport
+      // larger than the one the screenshot captures, so anything anchored to
+      // the bottom of the viewport lands below the crop and reads as clipped
+      // when it is not. `hasTouch` is what actually matters here: it is what
+      // makes `hover: none` apply, which is the thing the layout responds to.
+      hasTouch: vp.mobile,
+      colorScheme: scheme,
     });
-    const page = await ctx.newPage();
 
-    page.on("console", (m) => {
-      if (m.type() === "error") problems.push(`[${scheme}/${vp.name}] console: ${m.text()}`);
-    });
-    page.on("pageerror", (e) => problems.push(`[${scheme}/${vp.name}] pageerror: ${e.message}`));
-    page.on("requestfailed", (r) =>
-      problems.push(`[${scheme}/${vp.name}] request failed: ${r.url()} — ${r.failure()?.errorText}`));
+    for (const view of views) {
+      await page.goto(BASE + '/', { waitUntil: 'networkidle' });
+      await page.waitForTimeout(500);
 
-    try {
-      const res = await page.goto(url, { waitUntil: "networkidle", timeout: 30_000 });
-      if (res && res.status() >= 400) problems.push(`[${scheme}/${vp.name}] HTTP ${res.status()}`);
-    } catch (e) {
-      problems.push(`[${scheme}/${vp.name}] navigation failed: ${e.message}`);
-      await ctx.close();
-      continue;
+      if (view.open === 'slot') {
+        await page.click('.slot >> nth=0 >> .slot-open');
+        await page.waitForTimeout(450);
+      } else if (view.open) {
+        let btn = page.locator(`.toolbar button:has-text("${view.open}")`).first();
+        // On a phone the secondary panels live behind More rather than in the
+        // bottom bar, so getting to them takes the same two taps a user makes.
+        if (!(await btn.isVisible().catch(() => false))) {
+          await page.click('.more-btn');
+          await page.waitForTimeout(350);
+          btn = page.locator(`.menu-item:has-text("${view.open}")`).first();
+        }
+        if (await btn.count()) {
+          await btn.click();
+          await page.waitForTimeout(600);
+        }
+      }
+
+      if (view.then) {
+        await page.click(`.tab:has-text("${view.then}")`);
+        await page.waitForTimeout(400);
+      }
+
+      // Let lazy decor tiles settle so the shot shows what a user sees.
+      await page.waitForTimeout(500);
+      const file = join(OUT, `${vp.name}-${scheme}-${view.name}.png`);
+      await page.screenshot({ path: file });
+      console.log(file);
     }
 
-    await page.waitForTimeout(settle);
-
-    // Horizontal overflow is the single most common responsive defect and is
-    // invisible in a full-page screenshot, so measure it rather than eyeball it.
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth - document.documentElement.clientWidth
-    );
-    if (overflow > 0) problems.push(`[${scheme}/${vp.name}] page scrolls horizontally by ${overflow}px`);
-
-    const file = join(outDir, `${scheme}-${vp.name}-${vp.width}.png`);
-    await page.screenshot({ path: file, fullPage: true });
-    shots.push(file);
-    await ctx.close();
+    await page.close();
   }
 }
+
 await browser.close();
-
-const report =
-  `url: ${url}\nshots: ${shots.length}\n\n` +
-  shots.map((s) => `  ${s}`).join("\n") +
-  `\n\nproblems: ${problems.length}\n` +
-  (problems.length ? problems.map((p) => `  - ${p}`).join("\n") : "  none detected") +
-  `\n\nNow READ the PNGs. Automated checks catch overflow and errors; they cannot\n` +
-  `tell you whether the hierarchy works or the rhythm is accidental.\n`;
-
-writeFileSync(join(outDir, "report.txt"), report);
-console.log(report);
-process.exit(problems.length ? 1 : 0);

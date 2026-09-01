@@ -26,10 +26,13 @@ page.on('response', (r) => {
   if (r.url().includes('/decors/') && !r.ok()) errors.push(`DECOR ${r.status()}: ${r.url()}`);
 });
 
+// The hex is deliberately no longer painted on the column — it is the least
+// useful thing on a finish schedule — so the scheme is read from the data
+// attribute the column carries for exactly this purpose.
 const readSlots = () =>
   page.$$eval('.slot', (els) =>
     els.map((e) => ({
-      hex: e.querySelector('.slot-hex')?.textContent,
+      hex: e.getAttribute('data-hex'),
       code: e.querySelector('.slot-code')?.textContent ?? null,
       name: e.querySelector('.slot-name')?.textContent,
       role: e.querySelector('.surface-pill span[aria-hidden]')?.textContent,
@@ -49,15 +52,15 @@ await page.waitForTimeout(400);
 await page.click('.panel .chip:has-text("3 ·")').catch(() => {});
 await page.waitForTimeout(200);
 await page.fill('.panel input.input', 'u702');
-await page.waitForTimeout(400);
-await page.click('.panel .mat >> nth=0');
+await page.waitForTimeout(500);
+await page.click('.panel .card >> nth=0');
 await page.waitForTimeout(300);
 
 await page.click('.panel .chip:has-text("4 ·")').catch(() => {});
 await page.waitForTimeout(200);
 await page.fill('.panel input.input', 'h3303 st10');
-await page.waitForTimeout(400);
-await page.click('.panel .mat >> nth=0');
+await page.waitForTimeout(500);
+await page.click('.panel .card >> nth=0');
 await page.waitForTimeout(300);
 await page.keyboard.press('Escape');
 await page.waitForTimeout(200);
@@ -140,6 +143,64 @@ console.log('\n=== decor images ===');
   console.log('served from the base path:', imgs.every((i) => i.src?.includes('/decors/')));
 }
 
+// ---- the browsing grid pages in as you scroll -------------------------------
+console.log('\n=== browsing ===');
+{
+  await page.click('.toolbar button[title*="Browse and import"]');
+  await page.waitForTimeout(600);
+  const first = await page.locator('.panel .card').count();
+  const total = Number((await page.locator('.panel .section h3').first().textContent())?.match(/\d+/)?.[0] ?? 0);
+
+  // Scroll to the bottom repeatedly: each pass should pull in another page
+  // until the whole range is rendered.
+  let last = first;
+  for (let i = 0; i < 4; i++) {
+    await page.$eval('.panel-body', (e) => e.scrollTo(0, e.scrollHeight));
+    await page.waitForTimeout(450);
+    last = await page.locator('.panel .card').count();
+  }
+  console.log('catalogue reachable by scrolling:', total > 200);
+  console.log(`cards rendered: ${first} → ${last} (of ${total})`);
+  console.log('grid pages in on scroll:', last > first);
+  console.log(
+    'no hard cap below the range:',
+    last >= Math.min(total, first * 3),
+  );
+  await page.keyboard.press('Escape');
+}
+
+// ---- the four things asked for are where they should be ---------------------
+console.log('\n=== hierarchy ===');
+{
+  console.log('hex absent from the palette view:', (await page.locator('.slot .slot-hex').count()) === 0);
+  console.log('decor code leads each column:', (await page.locator('.slot .slot-code').count()) > 0);
+
+  await page.click('.slot >> nth=0 >> .slot-open');
+  await page.waitForTimeout(500);
+  await page.click('.tab:has-text("Colour")');
+  await page.waitForTimeout(300);
+  console.log('manual colour is a first-class tab:', (await page.locator('.panel .colour-well').count()) === 1);
+  console.log('lighter/deeper ramp offered:', (await page.locator('.panel .ramp-step').count()) === 7);
+
+  const rampColours = await page.$$eval('.panel .ramp-step', (els) =>
+    els.map((e) => getComputedStyle(e).backgroundColor),
+  );
+  // A ramp that has collapsed to one colour at the ends is the failure this
+  // check exists for: it happened, and it was invisible in the markup.
+  console.log('ramp spans distinct steps:', new Set(rampColours).size === rampColours.length);
+
+  const details = page.locator('.panel .details:has-text("Details")').first();
+  console.log('hex lives in the details, collapsed:', (await details.count()) === 1);
+  console.log(
+    'hex hidden until the details are opened:',
+    !(await page.locator('.panel .hex-chip').isVisible().catch(() => false)),
+  );
+  await details.locator('summary').click();
+  await page.waitForTimeout(200);
+  console.log('hex is the last detail:', await page.locator('.panel .deets dt').last().textContent());
+  await page.keyboard.press('Escape');
+}
+
 // ---- no AI surface remains --------------------------------------------------
 console.log('\n=== AI removed ===');
 console.log('brief button absent:', (await page.locator('.toolbar button:has-text("Brief")').count()) === 0);
@@ -171,7 +232,7 @@ console.log('\nurl length:', url.length);
 const page2 = await browser.newPage({ viewport: { width: 1600, height: 900 }, colorScheme: 'dark' });
 await page2.goto(url, { waitUntil: 'networkidle' });
 await page2.waitForTimeout(500);
-const reopened = await page2.$$eval('.slot', (els) => els.map((e) => e.querySelector('.slot-hex')?.textContent));
+const reopened = await page2.$$eval('.slot', (els) => els.map((e) => e.getAttribute('data-hex')));
 console.log('url round trip matches:', JSON.stringify(reopened) === JSON.stringify(scenario.map((s) => s.hex)));
 await page2.close();
 

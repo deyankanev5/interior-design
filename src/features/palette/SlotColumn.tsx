@@ -5,18 +5,25 @@ import { DecorSurface } from '../../ui/Decor';
 import { Icon } from '../../ui/Icon';
 import { actions } from '../../state/store';
 
+/**
+ * One surface in the scheme.
+ *
+ * What the column says, in order of size, is what the user is meant to read
+ * first. That used to be the hex code, which is the least useful thing on a
+ * finish schedule — nobody on site can buy `#CFC0B3`. It now leads with the
+ * decor reference and its name; the hex has moved into the slot's detail panel,
+ * where it sits last, as one attribute among several.
+ */
 export function SlotColumn({
   slot,
   index,
   total,
   onOpen,
-  onCopy,
 }: {
   slot: Slot;
   index: number;
   total: number;
   onOpen: (slotId: string) => void;
-  onCopy: (text: string) => void;
 }) {
   const material = getMaterial(slot.materialId);
   const fg = readableTextOn(slot.hex);
@@ -28,15 +35,19 @@ export function SlotColumn({
       style={{ background: slot.hex, color: fg }}
       data-surface={slot.surface}
       data-fg={fg}
+      /* The colour is no longer written on the face of the column, but the
+         scheme still has to be assertable from the outside — the end-to-end
+         test reads it here rather than from a rendered hex string. */
+      data-hex={slot.hex}
     >
       <DecorSurface className="slot-surface" material={material} hex={slot.hex} />
       <span className="slot-scrim" />
 
       <div className="slot-head">
-        <span className="surface-pill">
+        <span className="surface-pill" title="Change what this surface is">
           {/* The select below is the real control; this label is decoration. */}
           <span aria-hidden="true">{SURFACE_LABEL[slot.surface]}</span>
-          <Icon name="swap" size={12} />
+          <Icon name="chevron" size={13} />
           <select
             value={slot.surface}
             aria-label={`Role for slot ${index + 1}`}
@@ -58,7 +69,7 @@ export function SlotColumn({
             disabled={index === 0}
             onClick={() => actions.move(slot.id, -1)}
           >
-            <Icon name="left" size={14} />
+            <Icon name="left" size={15} />
           </button>
           <button
             className="slot-tool"
@@ -67,15 +78,7 @@ export function SlotColumn({
             disabled={index === total - 1}
             onClick={() => actions.move(slot.id, 1)}
           >
-            <Icon name="right" size={14} />
-          </button>
-          <button
-            className="slot-tool"
-            title="Alternatives for this surface"
-            aria-label="Show alternatives"
-            onClick={() => onOpen(slot.id)}
-          >
-            <Icon name="layers" size={15} />
+            <Icon name="right" size={15} />
           </button>
           <button
             className="slot-tool"
@@ -84,7 +87,7 @@ export function SlotColumn({
             disabled={total <= 2}
             onClick={() => actions.removeSlot(slot.id)}
           >
-            <Icon name="trash" size={14} />
+            <Icon name="trash" size={15} />
           </button>
           <button
             className={`slot-tool${slot.locked ? ' on' : ''}`}
@@ -93,27 +96,18 @@ export function SlotColumn({
             aria-pressed={slot.locked}
             onClick={() => actions.toggleLock(slot.id)}
           >
-            <Icon name={slot.locked ? 'lock' : 'unlock'} size={15} />
+            <Icon name={slot.locked ? 'lock' : 'unlock'} size={16} />
           </button>
         </div>
       </div>
 
       {slot.locked && (
-        <span className="lock-badge">
-          <Icon name="lock" size={17} />
+        <span className="lock-badge" title="Locked — generation leaves this alone">
+          <Icon name="lock" size={16} />
         </span>
       )}
 
       <div className="slot-body">
-        <button
-          className="slot-hex"
-          title="Copy hex"
-          onClick={() => onCopy(slot.hex)}
-          style={{ color: fg }}
-        >
-          {slot.hex.replace('#', '')}
-        </button>
-
         {material ? (
           <>
             <span className="slot-code">
@@ -129,12 +123,18 @@ export function SlotColumn({
           </>
         ) : (
           <>
-            <span className="slot-name">Free colour</span>
+            <span className="slot-code free">Custom colour</span>
+            <span className="slot-name">Not bound to a product</span>
             <span className="slot-meta">LRV {value.toFixed(0)}</span>
           </>
         )}
 
         {slot.note && <span className="slot-note">{slot.note}</span>}
+
+        <button className="slot-open" onClick={() => onOpen(slot.id)}>
+          <Icon name="sliders" size={14} />
+          Change
+        </button>
       </div>
     </div>
   );
