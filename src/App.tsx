@@ -111,17 +111,16 @@ export default function App() {
               index={i}
               total={palette.slots.length}
               onOpen={showSlot}
-              onCopy={onCopy}
             />
           ))}
           {!panel && !openSlot && (
             <p className="hint">
-              Press <b>Space</b> to generate · <b>1</b>–<b>9</b> to lock a slot · hover a column for its tools
+              <b>Space</b> to generate · <b>1</b>–<b>9</b> to lock a slot · hover a column for its tools
             </p>
           )}
         </main>
 
-        {openSlot && <SlotPanel slotId={openSlot} onClose={() => setOpenSlot(null)} />}
+        {openSlot && <SlotPanel slotId={openSlot} onClose={() => setOpenSlot(null)} onCopy={onCopy} />}
         {panel === 'analysis' && <AnalysisPanel onClose={closePanel} />}
         {panel === 'presets' && <PresetsPanel onClose={closePanel} />}
         {panel === 'library' && <LibraryPanel onClose={closePanel} onToast={notify} />}

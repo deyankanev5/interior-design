@@ -21,7 +21,16 @@ export type IconName =
   | 'right'
   | 'swap'
   | 'pencil'
-  | 'link';
+  | 'link'
+  | 'droplet'
+  | 'menu'
+  | 'sun'
+  | 'moon'
+  | 'monitor'
+  | 'chevron'
+  | 'sliders'
+  | 'dice'
+  | 'spinner';
 
 const PATHS: Record<IconName, string> = {
   lock: 'M7 10V7a5 5 0 0 1 10 0v3M5 10h14v11H5z',
@@ -47,6 +56,15 @@ const PATHS: Record<IconName, string> = {
   swap: 'M4 8h13l-3-3M20 16H7l3 3',
   pencil: 'M4 20h4L20 8l-4-4L4 16zM14 6l4 4',
   link: 'M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1',
+  droplet: 'M12 3s6 6.4 6 10.5a6 6 0 0 1-12 0C6 9.4 12 3 12 3z',
+  menu: 'M4 7h16M4 12h16M4 17h16',
+  sun: 'M12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10zM12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19',
+  moon: 'M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z',
+  monitor: 'M3 5h18v11H3zM9 20h6M12 16v4',
+  chevron: 'm6 9 6 6 6-6',
+  sliders: 'M4 8h10M18 8h2M4 16h4M12 16h8M16 5v6M8 13v6',
+  dice: 'M4 4h16v16H4zM8.5 8.5h.01M15.5 15.5h.01M12 12h.01',
+  spinner: 'M12 3a9 9 0 0 1 9 9',
 };
 
 export function Icon({ name, size = 16 }: { name: IconName; size?: number }) {

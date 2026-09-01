@@ -30,10 +30,17 @@ including across the eight-up Variations grid.
 **Any number of slots, 2 to 10.** Shrinking the palette drops unlocked slots first — a locked
 decision is never silently discarded.
 
-**Suggestions are ranked, not sampled.** Open a slot and you get the best candidates for that
-one surface, each scored against the rest of the scheme with the other slots held fixed, with a
-short reason. That is the part that beats pressing space repeatedly: you change one element
-without rerolling the room.
+**The decor leads, not the hex.** Each column shows the reference somebody can actually order —
+`H1386 ST40`, `Brown Casella Oak`, EGGER, LRV 17 — over the supplier's own photograph of the
+surface. The hex is a shortlisting aid, not something anyone buys, so it lives in the slot's
+Details, last, one attribute among several.
+
+**Three ways into a surface.** Open a slot and you get *Suggested* (candidates scored against
+the rest of the scheme, with every other slot held fixed, each with a short reason), *Browse*
+(the whole range for that surface, as a grid of decor photographs that loads as you scroll —
+650 finishes for a wall, not a capped list), and *Colour* (a large picker, a lightness ramp
+through the current hue, and lighter/deeper steps). That is the part that beats pressing space
+repeatedly: you change one element without rerolling the room.
 
 **Variations shows eight complete schemes at once**, ranked. Rerolling one at a time is good
 for exploring and poor for deciding.
@@ -52,6 +59,11 @@ address bar is a shareable link that reopens exactly what you see, locks include
 
 **Export** as a Markdown or CSV finish schedule (leading with the orderable reference, because
 nobody on site can buy `#CFC0B3`), PNG, SVG, JSON, or CSS custom properties.
+
+**Built for a phone as well as a desk.** On a narrow screen the columns stack, the panel
+buttons become a bottom navigation, and panels open as bottom sheets you can reach with a
+thumb. Nothing depends on hover — the tools and the Change button are simply present. Light and
+dark both ship, following the system by default with an explicit override.
 
 ### Keyboard
 
@@ -271,7 +283,9 @@ src/
     generate.ts           constrained generation, variations, per-slot suggestions
   state/                  store with undo/redo, named presets, URL codec
   features/               UI, one folder per panel
-scripts/                  catalogue scrapers, Pages check, end-to-end smoke test
+  ui/                     shared pieces: decor swatch, material card, browsing grid, colour field
+scripts/                  catalogue scrapers, Pages check, end-to-end smoke test,
+                          design-shot.mjs (screenshots every view at three widths, both themes)
 ```
 
 There is no server. Everything runs in the browser, which is why the app can be hosted as

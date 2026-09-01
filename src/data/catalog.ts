@@ -76,11 +76,14 @@ export function displayName(m: Material): string {
  * Deliberately forgiving about separators so that `u702`, `U 702`, `h3303 st10`
  * and `natural hamilton` all land on the right decor — specifiers type these
  * from memory or read them off a sample edge.
+ *
+ * Returns the whole ranked list. Callers that show a fixed number of rows slice
+ * it; the browsing grid pages through it, which is why this cannot cap itself.
  */
-export function searchMaterials(query: string, limit = 60): MaterialView[] {
+export function rankMaterials(query: string): MaterialView[] {
   const list = ensure();
   const q = query.trim().toLowerCase();
-  if (!q) return list.slice(0, limit);
+  if (!q) return list;
 
   const terms = q.split(/\s+/).filter(Boolean);
   const scored: { m: MaterialView; score: number }[] = [];
@@ -127,7 +130,39 @@ export function searchMaterials(query: string, limit = 60): MaterialView[] {
   }
 
   scored.sort((a, b) => b.score - a.score || a.m.code.localeCompare(b.m.code));
-  return scored.slice(0, limit).map((s) => s.m);
+  return scored.map((s) => s.m);
+}
+
+export function searchMaterials(query: string, limit = 60): MaterialView[] {
+  return rankMaterials(query).slice(0, limit);
+}
+
+export interface BrowseQuery {
+  query?: string;
+  /** Restrict to materials a given surface can legitimately take. */
+  surface?: Surface;
+  categories?: MaterialCategory[];
+  brands?: string[] | null;
+  realProductsOnly?: boolean;
+  /** Only entries with the supplier's own photograph. */
+  withImageOnly?: boolean;
+}
+
+/**
+ * The full list behind the browsing grid.
+ *
+ * Unbounded on purpose: the grid loads a page at a time as the user scrolls, so
+ * capping here would put a floor under how much of a range they can ever see —
+ * and with 753 orderable decors, a 60-row cap hides most of the catalogue.
+ */
+export function browseMaterials(q: BrowseQuery): MaterialView[] {
+  let list = rankMaterials(q.query ?? '');
+  if (q.surface) list = list.filter((m) => m.surfaces.includes(q.surface!));
+  if (q.categories?.length) list = list.filter((m) => q.categories!.includes(m.category));
+  if (q.brands?.length) list = list.filter((m) => q.brands!.includes(m.brand));
+  if (q.realProductsOnly) list = list.filter((m) => m.provenance !== 'generic');
+  if (q.withImageOnly) list = list.filter((m) => !!m.image);
+  return list;
 }
 
 const PAIRINGS = new Map(EGGER_PAIRINGS.map((p) => [p.decor, p]));

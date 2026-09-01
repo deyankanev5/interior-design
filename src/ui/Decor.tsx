@@ -29,8 +29,13 @@ export function DecorSurface({
 }) {
   const src = material?.image ? `${import.meta.env.BASE_URL}${material.image}` : null;
 
+  // The `decor` class is not decoration: it is what makes the wrapper a
+  // containing block. The photograph inside is absolutely positioned, so
+  // without it the image resolves against the viewport and paints across the
+  // whole screen — which is exactly what happened wherever a caller passed no
+  // className of its own.
   return (
-    <span className={className} style={{ ...style, background: hex }}>
+    <span className={`decor${className ? ` ${className}` : ''}`} style={{ ...style, background: hex }}>
       {src ? (
         <img
           className="decor-img"
