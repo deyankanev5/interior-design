@@ -21,9 +21,12 @@ When the plan doc exists, present to the human **only**:
 - anything the planner flagged as a risk or disagreement
 - the path to the doc
 
-Then stop and wait for approval. Do not create a branch, do not open a PR, do not
-write code. Approval of the plan is the one decision the human makes in this
-workflow — do not pre-empt it.
+Then proceed. Under the act-then-report model (`.claude/kit/autonomy.md`,
+2026-09-01) the plan does not wait: post the summary where the owner will see
+it and begin — silence is consent, and a veto is honoured instantly whenever
+it comes. Stop and wait only if the plan touches the floor (live production or
+its data, secrets, irreversible deletion, money) — those wait however long the
+owner takes.
 
 If the goal is too large for one track, present the decomposition instead and ask
 which track to start with.

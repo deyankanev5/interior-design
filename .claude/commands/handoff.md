@@ -1,6 +1,6 @@
 ---
 description: Update STATE.md and push, so any session or provider can resume cleanly
-allowed-tools: Read, Grep, Glob, Bash, Edit, Write
+allowed-tools: Read, Grep, Glob, Bash, Edit, Write, ListAgents, SendMessage
 ---
 
 Leave this project resumable by someone with no memory of this session.
@@ -24,7 +24,15 @@ Leave this project resumable by someone with no memory of this session.
    with changes, create `claude/<slug>` first and push that. This is the common
    session shape, not an edge case.
 
-3. Report what is left in flight, in three lines.
+3. Ping Dispatch, if it is reachable. Run `ListAgents`; if a session named
+   **Dispatch** is listed, `SendMessage` it three lines: which project, which
+   branch/PR the work landed on, and whether it is a delivery to review or a
+   handoff mid-track. This turns "Dispatch notices at the next poll" into
+   "Dispatch knows in seconds". If no Dispatch session is reachable, skip
+   silently — it reads the pushed STATE.md and the PR anyway, so nothing is
+   lost, only delayed. Never let this step block the handoff.
+
+4. Report what is left in flight, in three lines.
 
 Write STATE.md for an agent that has never seen this project. "Continued the
 refactor" is useless; name the files, the branch, and the next concrete step.

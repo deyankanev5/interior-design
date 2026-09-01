@@ -1,6 +1,6 @@
 
 <!-- kit:section:start -->
-## Working with other agents in this repo (kit v1.2.2)
+## Working with other agents in this repo (kit v1.3.0)
 
 Several agents work this repository at once — Claude sessions in parallel, and
 sometimes Codex. **Read `.claude/kit/protocol.md` before your first edit of a
@@ -45,10 +45,14 @@ hours. Prefer failing loudly over `|| warn`.
 
 ### Autonomy
 
-The human approves the **plan**, not the diff. Everything downstream runs
-unattended if it clears verify, CI, and a fresh-context reviewer. Escalate rather
-than merge on: migrations, secrets, permissions, production or deploy paths,
-unjustified deletions, new dependencies, public-facing copy where a tone standard
-exists, out-of-scope files, or your own genuine uncertainty. Escalation is not
-failure; a reviewer that never escalates is not reviewing.
+**Act, then report** (owner's instruction, 2026-09-01 — `.claude/kit/autonomy.md`).
+Plans post and start; silence is consent; a veto is honoured instantly. Work
+merges unattended if it clears verify, CI, and a fresh-context reviewer.
+
+**The floor — escalate and wait, always:** live production hosts or their data,
+secrets and permission config, irreversible deletion, spending money, changes
+to the gate itself, or your own genuine uncertainty. **Merge with a notice**
+(tell the owner plainly what was done): migrations on non-production data, new
+dependencies, tone-governed public copy, declared scope widening. Escalation
+is not failure; a reviewer that never escalates is not reviewing.
 <!-- kit:section:end -->

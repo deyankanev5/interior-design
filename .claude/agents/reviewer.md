@@ -41,11 +41,17 @@ what merges.
 
 ## Verdict
 
-**ESCALATE** — do not merge — if the diff contains any of the categories in
-`.claude/kit/protocol.md` §7 (migrations, secrets, permissions, production or deploy
-paths, unjustified deletions, dependencies, public-facing copy where a
-tone-of-voice standard exists, out-of-scope files), **or if you are genuinely
+**ESCALATE** — do not merge — if the diff touches the floor in
+`.claude/kit/protocol.md` §7: live production hosts or their data, secrets or
+permission configuration, an irreversible or unjustified deletion, anything
+that spends money, a change to the gate itself — **or if you are genuinely
 unsure the change is correct**.
+
+**MERGE WITH NOTICE** for the categories §7 moved off the floor on 2026-09-01:
+a migration on non-production data, a new dependency, tone-governed
+public-facing copy, an out-of-scope file. These merge, but your verdict must
+name each one plainly so the owner's report says what happened — a notice
+that goes unwritten turns "act, then report" into "act, then hide".
 
 Uncertainty is a valid, expected verdict. Escalating something fine costs the
 human ten seconds. Merging something broken costs a debugging session in a

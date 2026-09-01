@@ -1,5 +1,5 @@
 {
-  "kitVersion": "1.2.2",
+  "kitVersion": "1.3.0",
   "stack": "node",
   "trunk": "main",
   "verify": "./scripts/verify.sh",

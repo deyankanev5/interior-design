@@ -1,22 +1,30 @@
 # Autonomy: what runs without you
 
-The model is **approve the plan, not the diff**. You make decisions about what
-gets built and why. Everything from there to a squash-merged commit runs
-unattended, gated by checks rather than by your attention.
+The model is **act, then report**. Work does not wait for approval; it starts,
+clears the gates, merges, and the owner reads outcomes. Steering happens by
+veto, not by sign-off.
 
-This document says exactly where the line sits, because an autonomy model you
-cannot predict is one you end up supervising anyway — which defeats it.
+That is a deliberate choice the owner made explicitly (2026-09-01: "I want to
+minimize the manual work from my side, even if that means increased risk"),
+recorded here because a widened autonomy line is a §7 gate change and must be
+auditable. The previous model — approve every plan before work starts — is
+superseded.
+
+This document says exactly where the line now sits, because an autonomy model
+you cannot predict is one you end up supervising anyway — which defeats it.
 
 ---
 
-## The one thing you review
+## Plans: silence is consent
 
-A plan doc. It states the goal, the approach, the scope globs, the risks, and
-what "done" means. It is a page, not a diff. You say yes, or you correct the
-approach.
+A plan doc is still written for every track — goal, approach, scope globs,
+risks, definition of done. But it no longer waits. The plan is posted where the
+owner will see it (Dispatch, or the PR), and work begins immediately. A veto or
+redirect is honoured instantly at any point — but nothing idles waiting for a
+yes.
 
-Everything else — branching, implementing, testing, fixing CI, review, merge —
-happens without you unless a gate escalates.
+Everything downstream — branching, implementing, testing, fixing CI, review,
+merge — happens without the owner unless the floor below is touched.
 
 ## The gates
 
@@ -35,19 +43,34 @@ the load-bearing detail. An agent reviewing its own work re-derives the same
 assumptions and confirms itself; the failure is invisible precisely where it
 matters. Fresh context is what makes the review worth anything.
 
-## What always stops for you
+## What still stops for you — the floor that does not move
 
-Not preferences — hard stops. The reviewer does not merge these no matter how
-clean they look:
+The owner accepted increased risk; these stay anyway, because their failures
+cannot be un-made and accepted risk does not buy back destroyed state:
 
-- **Schema and migrations.** Reversibility depends on state the repo cannot see.
-- **Secrets and permissions.** Blast radius is not local to the diff.
-- **Production hosts and deploys.** In `alni` this is absolute: `alni.eu` is
-  read-only, and the Hetzner box runs four other live sites off one MySQL
-  container.
-- **Dependencies.** A new package is a supply-chain decision.
-- **Public-facing copy** in projects with a tone-of-voice standard.
-- **Anything outside the track's declared scope.**
+- **Live production hosts and their data.** `alni.eu` is read-only, absolute.
+  The Hetzner box runs four live sites off one shared MySQL container —
+  nothing destructive runs there unattended, ever.
+- **Secrets, credentials, permission grants.** A leaked secret cannot be
+  unleaked.
+- **Irreversible deletion** of anything that exists nowhere else.
+- **Spending money.**
+
+## What moved from "stops" to "act, then notify" (2026-09-01)
+
+These previously halted for approval. They now proceed, with a plain notice of
+what was done and why, so the owner can revert:
+
+- **Schema and migrations** on non-production data. Production data is floor.
+- **New dependencies** — the notice names the package and why it earned its
+  place; the supply-chain decision stays visible without blocking.
+- **Public-facing copy** under a tone-of-voice standard — it merges to trunk
+  behind the reviewer; *deploying* it to a live site is a production act and
+  sits on the floor.
+- **Scope widening**, when the notice says what widened and why.
+
+The reviewer still examines all of these. "Act, then notify" changes who
+waits, not what gets checked.
 
 ## What you get instead of a diff
 
@@ -76,6 +99,8 @@ tests exist.
 
 **Escalation fatigue runs both ways.** Too many escalations and you start
 approving without reading, which is worse than no gate. Too few and something
-lands that should not have. If you find yourself rubber-stamping, the rules in
-`protocol.md` §7 are too broad — narrow them deliberately rather than ignoring
-them in practice.
+lands that should not have. The 2026-09-01 shift to act-then-report was the
+deliberate version of this correction: the owner was the bottleneck, so the
+bottleneck moved to the gates. If something lands under this policy that
+should not have, the fix is to name the category and move it back to the floor
+— one line in this file — not to quietly resume asking about everything.

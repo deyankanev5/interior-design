@@ -1,6 +1,6 @@
 
 <!-- kit:section:start -->
-## Working alongside other agents in this repo (kit v1.2.2)
+## Working alongside other agents in this repo (kit v1.3.0)
 
 This repository is worked by several agents at once — Codex, Claude Code
 sessions, possibly more. They coordinate through one protocol, and it only works
@@ -41,23 +41,29 @@ appended by everybody.
 
 ### Before you merge: the gates
 
-A track merges only after **all** of these, and the human approves the *plan*,
-not the diff — so these gates are the only thing standing between your change
-and trunk:
+A track merges only after **all** of these. Since 2026-09-01 the human does
+not pre-approve plans (act-then-report — `.claude/kit/autonomy.md`; post the
+plan, start, honour any veto instantly), so these gates are the only thing
+standing between your change and trunk:
 
 1. `./scripts/verify.sh` green locally. A check that did not run is a failure, not a pass.
 2. CI green.
 3. A review by an agent that **did not write the code**. Reviewing your own work
    re-derives your own assumptions and confirms them.
 
-### Always escalate to a human instead of merging
+### The floor: escalate to a human and wait, always
 
-Migrations and schema changes · secrets, credentials and permission
-configuration · production hosts and deploy paths · deletions you cannot justify
-from the plan · new dependencies · public-facing copy where a tone standard
-exists · **changes to the gate itself** (`./scripts/verify.sh`, CI config, `.claude/**`,
-this protocol) · anything outside your declared `owns` · your own genuine
+Live production hosts and their data · secrets, credentials and permission
+configuration · irreversible deletion, or one you cannot justify from the
+plan · anything that spends money · **changes to the gate itself**
+(`./scripts/verify.sh`, CI config, `.claude/**`, this protocol) · your own genuine
 uncertainty that the change is correct.
+
+### Merge with a notice — tell the human plainly what was done
+
+Migrations on non-production data · new dependencies (name the package and
+why) · public-facing copy where a tone standard exists (deploying it live is
+floor) · anything outside your declared `owns`, naming what widened.
 
 Escalation is not failure. Merging something broken costs far more than asking.
 
